@@ -17,7 +17,7 @@ std::vector<Token> Lexer::LexFile(const std::string& filepath)
         return LexLines(lines); 
     } else
     {
-        std::cout << "Could not open file!" << std::endl;
+        std::cout << "Could not open lex file @ " << filepath << "!" << std::endl;
     }
 
     return {}; 
