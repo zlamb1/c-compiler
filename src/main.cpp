@@ -1,8 +1,17 @@
-#include <iostream>
-
-#include "token.hpp"
+#include "lexer.hpp"
 
 int main()
 {
-    std::cout << "Hello, world!" << std::endl;
+    Lexer lexer{}; 
+    auto tokens = lexer.LexFile("./examples/00.lang");
+
+    if (tokens.size())
+    {
+        for (auto token : tokens)
+        {
+            std::cout << "Token Value: " << token.value << std::endl;
+        }
+    } else {
+        std::cout << "No tokens were lexed." << std::endl; 
+    }
 }

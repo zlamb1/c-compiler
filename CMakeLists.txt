@@ -5,4 +5,4 @@ project(lang-lexer)
 set(CMAKE_CXX STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQIRED True)
 
-add_executable(${CMAKE_PROJECT_NAME} src/main.cpp)
+add_executable(${CMAKE_PROJECT_NAME} src/main.cpp src/lexer.cpp)

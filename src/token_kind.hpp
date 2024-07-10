@@ -2,5 +2,5 @@
 
 enum class TokenKind : int
 {
-
+    FOR
 };
