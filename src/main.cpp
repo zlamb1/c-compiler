@@ -7,9 +7,12 @@ int main()
 
     if (tokens.size())
     {
+        std::cout << std::endl; 
+        std::cout << "<------------- Lexical Analysis ------------->" << std::endl; 
         for (auto token : tokens)
         {
-            std::cout << "Token Value: " << token.value << std::endl;
+            auto val = token.value.empty() ? "No Value" : token.value; 
+            std::cout << "Token { " << TOKEN_KIND_NAMES[token.kind] << ", " << val << " }" << std::endl;
         }
     } else {
         std::cout << "No tokens were lexed." << std::endl; 
