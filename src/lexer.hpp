@@ -5,15 +5,14 @@
 #include <vector>
 
 #include "token.hpp"
+#include "stack_str.hpp"
 
 class Lexer
 {
     public:
-        std::vector<Token> LexFile(const std::string& filepath); 
-        std::vector<Token> LexLines(const std::vector<std::string>& lines);
+        const std::vector<Token>& LexFile(const std::string& filepath); 
+        Token LexToken(StackString& str); 
 
     private:
-        void LexString(const std::string& str, std::vector<Token>& tokens); 
-        void FlushToken(Token& token, std::vector<Token>& tokens); 
-
+        std::vector<Token> m_Tokens; 
 };

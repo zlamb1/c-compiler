@@ -3,7 +3,7 @@
 int main()
 {
     Lexer lexer{}; 
-    auto tokens = lexer.LexFile("./examples/00.lang");
+    auto tokens = lexer.LexFile("./examples/stage1/return_2.c");
 
     if (tokens.size())
     {
@@ -11,8 +11,8 @@ int main()
         std::cout << "<------------- Lexical Analysis ------------->" << std::endl; 
         for (auto token : tokens)
         {
-            auto val = token.value.empty() ? "No Value" : token.value; 
-            std::cout << "Token { " << TOKEN_KIND_NAMES[token.kind] << ", " << val << " }" << std::endl;
+            auto value = token.value.empty() ? "No Value" : token.value; 
+            std::cout << "Token { " << (int) token.kind << ", " << value << " }" << std::endl;
         }
     } else {
         std::cout << "No tokens were lexed." << std::endl; 
