@@ -29,6 +29,7 @@ class StackString
         bool hasCapacity(size_t len) const; 
 
         char pop(); 
+        std::string_view pop(size_t len); 
         char peek() const;
         std::string_view peek(size_t len) const;  
         void reverse(); 

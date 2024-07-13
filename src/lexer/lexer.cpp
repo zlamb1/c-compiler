@@ -4,30 +4,7 @@
 #include <sstream>
 #include <unordered_map>
 
-static inline bool is_digit(char c)
-{
-    switch (c)
-    {
-        case '0':
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-        case '5':
-        case '6':
-        case '7':
-        case '8':
-        case '9':
-            return true; 
-    }
-
-    return false; 
-}
-
-static inline bool is_nondigit(char c)
-{
-    return isalpha(c) || c == '_'; 
-}
+#include "utility.hpp"
 
 static inline Token check_keyword(Token& token)
 {
@@ -76,6 +53,14 @@ Token Lexer::LexToken(StackString& str)
                 continue;
             }
 
+            if (str.hasCapacity(2) && str.peek(2) == "0x")
+            {
+                str.pop(2);
+                token.kind = TokenKind::HexConstant;
+                token.value += "0x"; 
+                continue;
+            }
+
             if (is_digit(next_char))
             {
                 token.kind = TokenKind::IntConstant;
@@ -121,6 +106,11 @@ Token Lexer::LexToken(StackString& str)
                         token.value += next_char;
                     else return token; 
                     break;
+                case TokenKind::HexConstant:
+                    if (is_hexdigit(next_char))
+                        token.value += next_char;
+                    else return token;
+                    break; 
             }
 
             switch (next_char)

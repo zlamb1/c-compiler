@@ -26,6 +26,15 @@ char StackString::pop()
     return c; 
 }
 
+std::string_view StackString::pop(size_t len)
+{
+    if (len < 1 || m_View.length() - m_Position < len)
+        throw PopException(); 
+    auto view = m_View.substr(m_Position, len);
+    m_Position += len; 
+    return view; 
+}
+
 char StackString::peek() const
 {
     if (m_Position >= m_View.length())
@@ -35,9 +44,9 @@ char StackString::peek() const
 
 std::string_view StackString::peek(size_t len) const
 {
-    if (len == 0 || m_Position + len > m_View.length())
+    if (len < 1 || m_Position + len > m_View.length())
         throw PeekException(); 
-    return m_View.substr(m_Position, m_Position + len); 
+    return m_View.substr(m_Position, len); 
 }
 
 void StackString::reverse()
