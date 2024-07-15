@@ -1,48 +1,66 @@
 #pragma once
 
-#include "parser.hpp"
 #include "int_conv.hpp"
+#include "parser.hpp"
+#include "print.hpp"
+
+std::unordered_map<TokenKind, UnaryType> TOKEN_TO_UNARY_TYPE
+{
+    { TokenKind::Negation, UnaryType::Negation },
+    { TokenKind::BWComplement, UnaryType::BWComplement },
+    { TokenKind::LogicalNegation, UnaryType::LogicalNegation }
+};
 
 // Recursive-Descent Parser
-
 class RDParser : public Parser
 {
     public:
-        RDParser(std::vector<Token>& tokens) : Parser(tokens) 
+        RDParser(Lexer& lexer) : Parser(lexer)
         {
         }
 
-        AbstractSyntax* parse() override
+        AbstractSyntax* ParseFile(const std::string& filepath) override
         {
-            return parseProgram(); 
+            m_Tokens = m_Lexer.LexFile(filepath); 
+            return ParseProgram(); 
+        }
+
+        void PrintTree(AbstractSyntax* ast) override
+        {
+            if (ast)
+            {
+                std::cout << std::endl;
+                std::cout << "<--- Abstract Syntax Tree --->" << std::endl;
+                pretty_print_ast(ast);
+            }
         }
 
     private:
-        Program* parseProgram()
+        Program* ParseProgram()
         {
-            auto func = parseFunction(); 
+            auto func = ParseFunction(); 
             if (func == nullptr) return nullptr; 
             Program* p = new Program; 
             p->function = func; 
             return p; 
         }
 
-        Function* parseFunction()
+        Function* ParseFunction()
         {
-            auto token = nextToken();
+            auto token = NextToken();
             if (token->kind != TokenKind::Keyword || token->value != "int") return nullptr; 
-            token = nextToken(); 
+            token = NextToken(); 
             if (token->kind != TokenKind::Identifier) return nullptr; 
             std::string name = token->value; 
-            token = nextToken(); 
+            token = NextToken(); 
             if (token->kind != TokenKind::LeftParenthesis) return nullptr;
-            token = nextToken(); 
+            token = NextToken(); 
             if (token->kind != TokenKind::RightParenthesis) return nullptr; 
-            token = nextToken(); 
+            token = NextToken(); 
             if (token->kind != TokenKind::LeftBrace) return nullptr; 
-            auto statement = parseStatement(); 
+            auto statement = ParseStatement(); 
             if (statement == nullptr) return nullptr; 
-            token = nextToken(); 
+            token = NextToken(); 
             if (token->kind != TokenKind::RightBrace) return nullptr; 
             Function* func = new Function;
             func->name = name; 
@@ -50,27 +68,33 @@ class RDParser : public Parser
             return func; 
         }
 
-        Statement* parseStatement()
+        Statement* ParseStatement()
         {
-            auto token = nextToken(); 
+            auto token = NextToken(); 
             if (token->kind != TokenKind::Keyword || token->value != "return") return nullptr; 
-            auto expr = parseExpresssion(); 
+            auto expr = ParseExpression(); 
             if (expr == nullptr) return nullptr;
-            token = nextToken(); 
+            token = NextToken(); 
             if (token->kind != TokenKind::Semicolon) return nullptr; 
             auto ret = new Return; 
             ret->expr = expr; 
             return ret; 
         }
 
-        Expression* parseExpresssion()
+        Expression* ParseExpression()
         {
-            auto token = nextToken();
+            auto token = NextToken();
             if (token->kind == TokenKind::IntConstant || token->kind == TokenKind::HexConstant)
             {
                 auto expr = new IntExpr; 
                 expr->value = parse_c_int(token->value); 
                 return expr; 
+            } else if (TOKEN_TO_UNARY_TYPE.find(token->kind) != TOKEN_TO_UNARY_TYPE.end()) 
+            {
+                auto op = new UnaryOp;
+                op->type = TOKEN_TO_UNARY_TYPE[token->kind]; 
+                op->expr = ParseExpression(); 
+                return op; 
             } else return nullptr; 
         }
 };

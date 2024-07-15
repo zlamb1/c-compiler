@@ -14,3 +14,21 @@ struct IntExpr : public Expression
         visitor->visitIntExpr(this); 
     } 
 };
+
+enum class UnaryType : int
+{
+    Negation,
+    BWComplement,
+    LogicalNegation
+};
+
+struct UnaryOp : public Expression
+{
+    UnaryType type; 
+    Expression* expr; 
+
+    void accept(ASTVisitor* visitor) override
+    {
+        visitor->visitUnaryOp(this); 
+    }
+};

@@ -4,7 +4,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "parser/parser.hpp"
+#include "compiler.hpp"
 
 class GenVisitor : public ASTVisitor
 {
@@ -45,6 +45,28 @@ class GenVisitor : public ASTVisitor
             m_Output << getSpaces() << "mov " << "$" << expr->value << ", " << "%eax" << std::endl;
         }
 
+        void visitUnaryOp(UnaryOp* op) override
+        {
+            auto spaces = getSpaces(); 
+            op->expr->accept(this); 
+            std::string assembly; 
+            switch (op->type)
+            {
+                case UnaryType::Negation:
+                    assembly = "neg %eax";
+                    break;
+                case UnaryType::BWComplement:
+                    assembly = "not %eax";
+                    break;
+                case UnaryType::LogicalNegation:
+                    assembly = "cmpl $0, %eax\n";
+                    assembly += spaces + "movl $0, %eax\n";
+                    assembly += spaces + "sete %al";
+                    break;
+            }
+            m_Output << spaces << assembly << std::endl; 
+        }
+
     private: 
         std::ofstream m_Output; 
         size_t m_IndentLevel = 0; 
@@ -55,20 +77,18 @@ class GenVisitor : public ASTVisitor
         }
 };
 
-struct GenInfo
-{
-    std::string name; 
-};
-
-static void genCode(AbstractSyntax* ast, GenInfo info)
+static void genCode(AbstractSyntax* ast, CompilerFlags& flags)
 {
     if (ast != nullptr)
     {
-        GenVisitor gv{ info.name + ".s" };
+        GenVisitor gv{ flags.outputname + ".s" };
         ast->accept(&gv);
-        auto gccCmd = "gcc " + info.name + ".s -o " + info.name;
+        auto gccCmd = "gcc " + flags.outputname + ".s -o " + flags.outputname;
         system(gccCmd.c_str());
-        auto rmCmd = "rm " + info.name + ".s"; 
-        system(rmCmd.c_str());
-    } else std::cout << "Could not generate code due to NULL AST!" << std::endl; 
+        if (!flags.output_asm)
+        {
+            auto rmCmd = "rm " + flags.outputname + ".s"; 
+            system(rmCmd.c_str());
+        }
+    } else std::cout << "Could not generate code due to NULL abstract syntax tree!" << std::endl; 
 }

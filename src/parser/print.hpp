@@ -13,41 +13,58 @@ class ASTPrinter : public ASTVisitor
         void visitProgram(Program* program) override
         {
             std::cout << "Program(" << std::endl;
-            m_Spaces += m_Indent; 
+            setIndent(m_Indent + 1); 
             visitFunction(program->function);
-            m_Spaces -= m_Indent;
+            setIndent(m_Indent - 1);
             std::cout << ")" << std::endl;
         }
 
         void visitFunction(Function* function) override
         {
-            std::string spaces(m_Spaces, ' '); 
-            std::cout << spaces << function->name << "(" << std::endl;
-            m_Spaces += m_Indent; 
+            std::cout << m_Spaces << function->name << "(" << std::endl;
+            setIndent(m_Indent + 1); 
             function->statement->accept(this); 
-            m_Spaces -= m_Indent; 
-            std::cout << spaces << ")" << std::endl;
+            setIndent(m_Indent - 1); 
+            std::cout << m_Spaces << ")" << std::endl;
         }
 
         void visitReturn(Return* ret) override
         {
-            std::string spaces(m_Spaces, ' '); 
-            std::cout << spaces << "Return(" << std::endl;
-            m_Spaces += m_Indent; 
+            std::cout << m_Spaces << "Return(" << std::endl;
+            setIndent(m_Indent + 1);  
+            std::cout << m_Spaces; 
             ret->expr->accept(this); 
-            m_Spaces -= m_Indent; 
-            std::cout << spaces << ")" << std::endl;
+            std::cout << "\n";
+            setIndent(m_Indent - 1); 
+            std::cout << m_Spaces << ")" << std::endl;
         }
 
         void visitIntExpr(IntExpr* expr) override
         {
-            std::string spaces(m_Spaces, ' '); 
-            std::cout << spaces << "Expr(" << expr->value << ")" << std::endl;
+            std::cout << "IntExpr(" << expr->value << ")";
+        }
+
+        void visitUnaryOp(UnaryOp* op) override
+        {
+            switch (op->type)
+            {
+                case UnaryType::Negation: std::cout << "-"; break;
+                case UnaryType::BWComplement: std::cout << "~"; break;
+                case UnaryType::LogicalNegation: std::cout << "!"; break;
+            }
+            op->expr->accept(this);
         }
     
     private:
-        size_t m_Spaces = 0; 
-        size_t m_Indent = 2; 
+        size_t m_Indent = 0; 
+        size_t m_IndentSize = 2; 
+
+        std::string m_Spaces; 
+        void setIndent(size_t indent)
+        {
+            m_Indent = indent;
+            m_Spaces = std::string(m_Indent * m_IndentSize, ' '); 
+        }
 };
 
 static void pretty_print_ast(AbstractSyntax* ast)

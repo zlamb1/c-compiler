@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "lexer/token.hpp"
+#include "lexer/lexer.hpp"
 
 #include "syntax/program.hpp"
 #include "syntax/function.hpp"
@@ -12,14 +12,18 @@
 class Parser
 {
     public:
-        Parser(std::vector<Token>& tokens) : m_Tokens(tokens) 
+        Parser(Lexer& lexer) : m_Lexer(lexer)
         {
         }
 
-        virtual AbstractSyntax* parse() = 0; 
+        virtual AbstractSyntax* ParseFile(const std::string& filepath) = 0; 
+        virtual void PrintTree(AbstractSyntax* ast) = 0; 
 
     protected:
-        const Token* nextToken()
+        Lexer& m_Lexer; 
+        std::vector<Token> m_Tokens; 
+
+        const Token* NextToken()
         {
             if (m_Position >= m_Tokens.size())
             {
@@ -32,7 +36,6 @@ class Parser
         }
 
     private:
-        std::vector<Token> m_Tokens;
         size_t m_Position = 0; 
 
 };

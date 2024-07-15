@@ -55,9 +55,8 @@ Token Lexer::LexToken(StackString& str)
 
             if (str.hasCapacity(2) && str.peek(2) == "0x")
             {
-                str.pop(2);
                 token.kind = TokenKind::HexConstant;
-                token.value += "0x"; 
+                token.value += str.pop(2);
                 continue;
             }
 
@@ -84,6 +83,15 @@ Token Lexer::LexToken(StackString& str)
                 case ';':
                     token.kind = TokenKind::Semicolon;
                     break;
+                case '-':
+                    token.kind = TokenKind::Negation;
+                    break;
+                case '~':
+                    token.kind = TokenKind::BWComplement;
+                    break; 
+                case '!':
+                    token.kind = TokenKind::LogicalNegation; 
+                    break; 
             }
 
             if (token.kind != TokenKind::None)
@@ -120,6 +128,9 @@ Token Lexer::LexToken(StackString& str)
                 case '{':
                 case '}':
                 case ';':
+                case '-':
+                case '~':
+                case '!':
                     return token; 
             }
         }
