@@ -48,11 +48,26 @@ class ASTPrinter : public ASTVisitor
         {
             switch (op->type)
             {
-                case UnaryType::Negation: std::cout << "-"; break;
-                case UnaryType::BWComplement: std::cout << "~"; break;
-                case UnaryType::LogicalNegation: std::cout << "!"; break;
+                case UnaryOpType::Negation: std::cout << "-"; break;
+                case UnaryOpType::Complement: std::cout << "~"; break;
+                case UnaryOpType::LogicalNegation: std::cout << "!"; break;
             }
             op->expr->Accept(this);
+        }
+
+        void VisitBinaryOp(BinaryOp* op) override
+        {
+            std::cout << "(";
+            op->lvalue->Accept(this); 
+            switch (op->type)
+            {
+                case BinaryOpType::Addition: std::cout << "+"; break;
+                case BinaryOpType::Subtraction: std::cout << "-"; break;
+                case BinaryOpType::Multiplication: std::cout << "*"; break;
+                case BinaryOpType::Division: std::cout << "/"; break;
+            }
+            op->rvalue->Accept(this);
+            std::cout << ")";
         }
     
     private:
@@ -75,6 +90,6 @@ static void pretty_print_ast(AbstractSyntax* ast)
         ast->Accept(&printer); 
     } else 
     {
-        std::cout << "The AST is NULL!" << std::endl; 
+        std::cout << "The abstract syntax tree is null!" << std::endl; 
     }
 }

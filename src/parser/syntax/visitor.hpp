@@ -5,6 +5,7 @@ class Function;
 class Return; 
 class IntExpr; 
 class UnaryOp; 
+class BinaryOp; 
 
 class ASTVisitor
 {
@@ -15,5 +16,6 @@ public:
     virtual void VisitReturn(Return* ret) = 0;
     virtual void VisitIntExpr(IntExpr* expr) = 0;
     virtual void VisitUnaryOp(UnaryOp* op) = 0; 
+    virtual void VisitBinaryOp(BinaryOp* op) = 0; 
 
 };

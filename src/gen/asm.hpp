@@ -21,8 +21,8 @@ class GCCAssembler : public Assembler
             system(gccCmd.c_str()); 
             if (true)
             {
-                auto rmCmd = "rm " + filepath; 
-                system(rmCmd.c_str());
+                //auto rmCmd = "rm " + filepath; 
+                //system(rmCmd.c_str());
             }
         }
 };

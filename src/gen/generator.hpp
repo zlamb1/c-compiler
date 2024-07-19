@@ -42,17 +42,53 @@ class ASMVisitor : public ASTVisitor
             op->expr->Accept(this); 
             switch (op->type)
             {
-                case UnaryType::Negation:
+                case UnaryOpType::Negation:
                     m_CodeGenerator.EmitOp("neg", RegisterArg("eax")); 
                     break;
-                case UnaryType::BWComplement:
+                case UnaryOpType::Complement:
                     m_CodeGenerator.EmitOp("not", RegisterArg("eax"));
                     break;
-                case UnaryType::LogicalNegation:
+                case UnaryOpType::LogicalNegation:
                     m_CodeGenerator.EmitOp("cmp", ImmediateArg(0), RegisterArg("eax"));
                     m_CodeGenerator.EmitOp("mov", ImmediateArg(0), RegisterArg("eax"));
                     m_CodeGenerator.EmitOp("sete", RegisterArg("al")); 
                     break;
+            }
+        }
+
+        void VisitBinaryOp(BinaryOp* op) override
+        {
+            switch (op->type)
+            {
+                case BinaryOpType::Addition:
+                    op->lvalue->Accept(this); 
+                    m_CodeGenerator.EmitOp("push", RegisterArg("rax")); 
+                    op->rvalue->Accept(this); 
+                    m_CodeGenerator.EmitOp("pop", RegisterArg("rcx"));
+                    m_CodeGenerator.EmitOp("add", RegisterArg("ecx"), RegisterArg("eax")); 
+                    break;
+                case BinaryOpType::Subtraction:
+                    op->rvalue->Accept(this); 
+                    m_CodeGenerator.EmitOp("push", RegisterArg("rax")); 
+                    op->lvalue->Accept(this); 
+                    m_CodeGenerator.EmitOp("pop", RegisterArg("rcx"));
+                    m_CodeGenerator.EmitOp("sub", RegisterArg("ecx"), RegisterArg("eax"));
+                    break;
+                case BinaryOpType::Multiplication:
+                    op->lvalue->Accept(this); 
+                    m_CodeGenerator.EmitOp("push", RegisterArg("rax")); 
+                    op->rvalue->Accept(this); 
+                    m_CodeGenerator.EmitOp("pop", RegisterArg("rcx"));
+                    m_CodeGenerator.EmitOp("imul", RegisterArg("ecx"), RegisterArg("eax"));
+                    break;
+                case BinaryOpType::Division:
+                    op->rvalue->Accept(this);
+                    m_CodeGenerator.EmitOp("push", RegisterArg("rax")); 
+                    op->lvalue->Accept(this); 
+                    m_CodeGenerator.EmitOp("cdq");
+                    m_CodeGenerator.EmitOp("pop", RegisterArg("rcx"));
+                    m_CodeGenerator.EmitOp("idiv", RegisterArg("ecx")); 
+                    break; 
             }
         }
 

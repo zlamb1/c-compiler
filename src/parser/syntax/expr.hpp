@@ -15,20 +15,40 @@ struct IntExpr : public Expression
     } 
 };
 
-enum class UnaryType : int
+enum class UnaryOpType : int
 {
     Negation,
-    BWComplement,
+    Complement,
     LogicalNegation
 };
 
 struct UnaryOp : public Expression
 {
-    UnaryType type; 
+    UnaryOpType type; 
     Expression* expr; 
 
     void Accept(ASTVisitor* visitor) override
     {
         visitor->VisitUnaryOp(this); 
+    }
+};
+
+enum class BinaryOpType
+{
+    Addition,
+    Subtraction,
+    Multiplication,
+    Division  
+};
+
+struct BinaryOp : public Expression
+{
+    BinaryOpType type; 
+    Expression* lvalue; 
+    Expression* rvalue; 
+
+    void Accept(ASTVisitor* visitor) override
+    {
+        visitor->VisitBinaryOp(this);
     }
 };

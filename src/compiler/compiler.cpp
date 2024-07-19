@@ -28,16 +28,23 @@ void Compiler::CompileProgram()
         return;
     }
     
-    auto ast = m_Parser->ParseFile(m_Flags.filepath); 
-    m_Parser->PrintTree(ast); 
-
-    if (ast == nullptr)
+    try 
     {
-        LogError("Failed to generate abstract syntax tree."); 
-        return;
-    }
+        auto ast = m_Parser->ParseFile(m_Flags.filepath); 
+        m_Parser->PrintTree(ast); 
+        
+        if (ast == nullptr)
+        {
+            LogError("Failed to generate abstract syntax tree."); 
+            return;
+        }
 
-    m_CompilerBackend->GenerateCode(m_Flags, ast); 
+        m_CompilerBackend->GenerateCode(m_Flags, ast); 
+    } catch (ParseException exc)
+    {
+        std::cout << "Failed to parse file: " << std::endl;
+        std::cout << exc.what() << std::endl;
+    }
 }
 
 void Compiler::ScanFlags(int argc, char* argv[])

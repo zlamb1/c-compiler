@@ -78,13 +78,22 @@ Token Lexer::LexToken(StackString& str)
                     token.kind = TokenKind::Semicolon;
                     break;
                 case '-':
-                    token.kind = TokenKind::Negation;
+                    token.kind = TokenKind::Minus;
                     break;
                 case '~':
-                    token.kind = TokenKind::BWComplement;
+                    token.kind = TokenKind::Tilde;
                     break; 
                 case '!':
-                    token.kind = TokenKind::LogicalNegation; 
+                    token.kind = TokenKind::Exclamation; 
+                    break;
+                case '+':
+                    token.kind = TokenKind::Plus;
+                    break; 
+                case '*':
+                    token.kind = TokenKind::Asterisk;
+                    break;
+                case '/':
+                    token.kind = TokenKind::Slash;
                     break; 
             }
 
@@ -125,6 +134,9 @@ Token Lexer::LexToken(StackString& str)
                 case '-':
                 case '~':
                 case '!':
+                case '+':
+                case '*':
+                case '/': 
                     return token; 
             }
         }

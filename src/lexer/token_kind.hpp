@@ -13,9 +13,12 @@ enum class TokenKind : int
     LeftBrace,
     RightBrace,
     Semicolon,
-    Negation,
-    BWComplement,
-    LogicalNegation,
+    Minus,
+    Tilde,
+    Exclamation,
+    Plus,
+    Asterisk,
+    Slash,
 
     None
 };
@@ -31,8 +34,11 @@ static std::unordered_map<TokenKind, std::string> TOKEN_KIND_NAMES
     { TokenKind::LeftBrace, "{" },
     { TokenKind::RightBrace, "}" },
     { TokenKind::Semicolon, ";" },
-    { TokenKind::Negation, "-" },
-    { TokenKind::BWComplement, "~" },
-    { TokenKind::LogicalNegation, "!" },
+    { TokenKind::Minus, "-" },
+    { TokenKind::Tilde, "~" },
+    { TokenKind::Exclamation, "!" },
+    { TokenKind::Plus, "+" },
+    { TokenKind::Asterisk, "*" },
+    { TokenKind::Slash, "/" },
     { TokenKind::None, "None" }
 };

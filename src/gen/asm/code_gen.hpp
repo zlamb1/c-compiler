@@ -33,6 +33,12 @@ class ASMCodeGenerator : public CodeGenerator
             outputstream() << m_IndentStr << op << " " << EvaluateArg(arg) << std::endl;
         }
 
+        void EmitOp(const std::string& op, const RegisterArg& arg1, const RegisterArg& arg2)
+        {
+            assert(m_OutputStream); 
+            outputstream() << m_IndentStr << op << " " << EvaluateArg(arg1) << ", " << EvaluateArg(arg2) << std::endl; 
+        }
+
         void EmitOp(const std::string& op, const ImmediateArg& arg1, const RegisterArg& arg2)
         {
             assert(m_OutputStream);
