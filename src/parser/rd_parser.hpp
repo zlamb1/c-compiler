@@ -4,7 +4,7 @@
 #include "parser.hpp"
 #include "print.hpp"
 
-std::unordered_map<TokenKind, UnaryType> TOKEN_TO_UNARY_TYPE
+static std::unordered_map<TokenKind, UnaryType> TOKEN_TO_UNARY_TYPE
 {
     { TokenKind::Negation, UnaryType::Negation },
     { TokenKind::BWComplement, UnaryType::BWComplement },
@@ -15,13 +15,13 @@ std::unordered_map<TokenKind, UnaryType> TOKEN_TO_UNARY_TYPE
 class RDParser : public Parser
 {
     public:
-        RDParser(Lexer& lexer) : Parser(lexer)
+        RDParser(std::unique_ptr<Lexer> lexer) : Parser(std::move(lexer))
         {
         }
 
         AbstractSyntax* ParseFile(const std::string& filepath) override
         {
-            m_Tokens = m_Lexer.LexFile(filepath); 
+            m_Tokens = m_Lexer->LexFile(filepath); 
             return ParseProgram(); 
         }
 

@@ -6,8 +6,8 @@ struct Program : public AbstractSyntax
 {
     Function* function;
 
-    void accept(ASTVisitor* visitor) override
+    void Accept(ASTVisitor* visitor) override
     {
-        visitor->visitProgram(this); 
+        visitor->VisitProgram(this); 
     }
 };

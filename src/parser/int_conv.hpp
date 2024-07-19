@@ -3,7 +3,7 @@
 #include <math.h>
 #include <unordered_map>
 
-std::unordered_map<char, int> HEX_DIGITS
+static std::unordered_map<char, int> HEX_DIGITS
 {
     { '0',  0 },
     { '1',  1 },

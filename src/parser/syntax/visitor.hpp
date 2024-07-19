@@ -10,10 +10,10 @@ class ASTVisitor
 {
 
 public:
-    virtual void visitProgram(Program* program) = 0;
-    virtual void visitFunction(Function* function) = 0;
-    virtual void visitReturn(Return* ret) = 0;
-    virtual void visitIntExpr(IntExpr* expr) = 0;
-    virtual void visitUnaryOp(UnaryOp* op) = 0; 
+    virtual void VisitProgram(Program* program) = 0;
+    virtual void VisitFunction(Function* function) = 0;
+    virtual void VisitReturn(Return* ret) = 0;
+    virtual void VisitIntExpr(IntExpr* expr) = 0;
+    virtual void VisitUnaryOp(UnaryOp* op) = 0; 
 
 };

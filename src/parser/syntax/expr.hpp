@@ -9,9 +9,9 @@ struct Expression : public AbstractSyntax
 struct IntExpr : public Expression
 {
     int value;
-    void accept(ASTVisitor* visitor) override
+    void Accept(ASTVisitor* visitor) override
     {
-        visitor->visitIntExpr(this); 
+        visitor->VisitIntExpr(this); 
     } 
 };
 
@@ -27,8 +27,8 @@ struct UnaryOp : public Expression
     UnaryType type; 
     Expression* expr; 
 
-    void accept(ASTVisitor* visitor) override
+    void Accept(ASTVisitor* visitor) override
     {
-        visitor->visitUnaryOp(this); 
+        visitor->VisitUnaryOp(this); 
     }
 };

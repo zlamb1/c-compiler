@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 
 #include "lexer/lexer.hpp"
@@ -12,15 +13,17 @@
 class Parser
 {
     public:
-        Parser(Lexer& lexer) : m_Lexer(lexer)
+        Parser(std::unique_ptr<Lexer> lexer) : m_Lexer(std::move(lexer))
         {
         }
+         
+        virtual ~Parser() = default; 
 
         virtual AbstractSyntax* ParseFile(const std::string& filepath) = 0; 
         virtual void PrintTree(AbstractSyntax* ast) = 0; 
 
     protected:
-        Lexer& m_Lexer; 
+        std::unique_ptr<Lexer> m_Lexer; 
         std::vector<Token> m_Tokens; 
 
         const Token* NextToken()

@@ -1,11 +1,5 @@
 #include "lexer.hpp"
 
-#include <ctype.h>
-#include <sstream>
-#include <unordered_map>
-
-#include "utility.hpp"
-
 static inline Token check_keyword(Token& token)
 {
     if (token.value == "int" || token.value == "return")

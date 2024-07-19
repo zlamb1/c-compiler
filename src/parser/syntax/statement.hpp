@@ -11,8 +11,8 @@ struct Return : public Statement
 {
     Expression* expr; 
 
-    void accept(ASTVisitor* visitor) override
+    void Accept(ASTVisitor* visitor) override
     {
-        visitor->visitReturn(this); 
+        visitor->VisitReturn(this); 
     }
 };

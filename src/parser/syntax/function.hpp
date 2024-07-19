@@ -9,8 +9,8 @@ struct Function : public AbstractSyntax
     std::string name; 
     Statement* statement = nullptr; 
 
-    void accept(ASTVisitor* visitor) override
+    void Accept(ASTVisitor* visitor) override
     {
-        visitor->visitFunction(this); 
+        visitor->VisitFunction(this); 
     }
 };

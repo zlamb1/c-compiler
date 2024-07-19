@@ -4,5 +4,5 @@
 
 struct AbstractSyntax
 {
-    virtual void accept(ASTVisitor* visitor) = 0;
+    virtual void Accept(ASTVisitor* visitor) = 0;
 };
