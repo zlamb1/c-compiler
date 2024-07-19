@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22.1)
 
-project(lang-lexer)
+project(c-compiler)
 
 set(CMAKE_CXX STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQIRED True)
