@@ -17,14 +17,20 @@ static std::unordered_map<TokenKind, BinaryOpType> TOKEN_TO_BINARY_TYPE
     { TokenKind::Minus, BinaryOpType::Subtraction },
     { TokenKind::Asterisk, BinaryOpType::Multiplication },
     { TokenKind::Slash, BinaryOpType::Division },
+    { TokenKind::Pipe, BinaryOpType::BitwiseOr },
     { TokenKind::DoublePipe, BinaryOpType::LogicalOr },
+    { TokenKind::Ampersand, BinaryOpType::BitwiseAnd },
     { TokenKind::DoubleAmpersand, BinaryOpType::LogicalAnd },
     { TokenKind::DoubleEquals, BinaryOpType::Equal },
     { TokenKind::NotEqual, BinaryOpType::NotEqual },
     { TokenKind::LessThan, BinaryOpType::LessThan },
     { TokenKind::LessThanOrEqual, BinaryOpType::LessThanOrEqual },
     { TokenKind::GreaterThan, BinaryOpType::GreaterThan },
-    { TokenKind::GreaterThanOrEqual, BinaryOpType::GreaterThanOrEqual }
+    { TokenKind::GreaterThanOrEqual, BinaryOpType::GreaterThanOrEqual },
+    { TokenKind::Percent, BinaryOpType::Remainder },
+    { TokenKind::Caret, BinaryOpType::BitwiseXOR },
+    { TokenKind::LeftShift, BinaryOpType::BitwiseLeftShift },
+    { TokenKind::RightShift, BinaryOpType::BitwiseRightShift }
 };
 
 // Recursive-Descent Parser
@@ -125,10 +131,70 @@ class RDParser : public Parser
 
         Expression* ParseLogicalAndExpression()
         {
-            auto expr = ParseEqualityExpression(); 
+            auto expr = ParseBitwiseOrExpression(); 
             auto token = PeekToken(); 
             if (token->kind == TokenKind::None) ExceptParse("Incomplete Expression"); 
             while (token->kind == TokenKind::DoubleAmpersand)
+            {
+                ConsumeToken(); 
+                auto type = TOKEN_TO_BINARY_TYPE[token->kind];
+                auto nextExpr = ParseBitwiseOrExpression(); 
+                auto op = new BinaryOp; 
+                op->type = type; 
+                op->lvalue = expr; 
+                op->rvalue = nextExpr; 
+                expr = op; 
+                token = PeekToken();
+            }
+            return expr; 
+        }
+
+        Expression* ParseBitwiseOrExpression()
+        {
+            auto expr = ParseBitwiseXORExpression(); 
+            auto token = PeekToken(); 
+            if (token->kind == TokenKind::None) ExceptParse("Incomplete Expression"); 
+            while (token->kind == TokenKind::Pipe)
+            {
+                ConsumeToken(); 
+                auto type = TOKEN_TO_BINARY_TYPE[token->kind];
+                auto nextExpr = ParseBitwiseXORExpression(); 
+                auto op = new BinaryOp; 
+                op->type = type; 
+                op->lvalue = expr; 
+                op->rvalue = nextExpr; 
+                expr = op; 
+                token = PeekToken();
+            }
+            return expr; 
+        }
+
+        Expression* ParseBitwiseXORExpression()
+        {
+            auto expr = ParseBitwiseAndExpression(); 
+            auto token = PeekToken(); 
+            if (token->kind == TokenKind::None) ExceptParse("Incomplete Expression"); 
+            while (token->kind == TokenKind::Caret)
+            {
+                ConsumeToken(); 
+                auto type = TOKEN_TO_BINARY_TYPE[token->kind];
+                auto nextExpr = ParseBitwiseAndExpression(); 
+                auto op = new BinaryOp; 
+                op->type = type; 
+                op->lvalue = expr; 
+                op->rvalue = nextExpr; 
+                expr = op; 
+                token = PeekToken();
+            }
+            return expr; 
+        }
+
+        Expression* ParseBitwiseAndExpression()
+        {
+            auto expr = ParseEqualityExpression(); 
+            auto token = PeekToken(); 
+            if (token->kind == TokenKind::None) ExceptParse("Incomplete Expression"); 
+            while (token->kind == TokenKind::Ampersand)
             {
                 ConsumeToken(); 
                 auto type = TOKEN_TO_BINARY_TYPE[token->kind];
@@ -165,11 +231,31 @@ class RDParser : public Parser
 
         Expression* ParseRelationalExpression()
         {
-            auto expr = ParseAdditiveExpression(); 
+            auto expr = ParseShiftExpression(); 
             auto token = PeekToken(); 
             if (token->kind == TokenKind::None) ExceptParse("Incomplete Expression");
             while (token->kind == TokenKind::LessThan || token->kind == TokenKind::LessThanOrEqual ||
                    token->kind == TokenKind::GreaterThan || token->kind == TokenKind::GreaterThanOrEqual)
+            {
+                ConsumeToken(); 
+                auto type = TOKEN_TO_BINARY_TYPE[token->kind];
+                auto nextExpr = ParseShiftExpression(); 
+                auto op = new BinaryOp; 
+                op->type = type;
+                op->lvalue = expr;
+                op->rvalue = nextExpr; 
+                expr = op; 
+                token = PeekToken();
+            }
+            return expr; 
+        }
+
+        Expression* ParseShiftExpression()
+        {
+            auto expr = ParseAdditiveExpression(); 
+            auto token = PeekToken(); 
+            if (token->kind == TokenKind::None) ExceptParse("Incomplete Expression");
+            while (token->kind == TokenKind::LeftShift || token->kind == TokenKind::RightShift)
             {
                 ConsumeToken(); 
                 auto type = TOKEN_TO_BINARY_TYPE[token->kind];
@@ -209,7 +295,7 @@ class RDParser : public Parser
             auto factor = ParseFactor(); 
             auto token = PeekToken(); 
             if (token->kind == TokenKind::None) ExceptParse("Incomplete Term"); 
-            while (token->kind == TokenKind::Asterisk || token->kind == TokenKind::Slash)
+            while (token->kind == TokenKind::Asterisk || token->kind == TokenKind::Slash || token->kind == TokenKind::Percent)
             {
                 ConsumeToken(); 
                 auto type = TOKEN_TO_BINARY_TYPE[token->kind]; 

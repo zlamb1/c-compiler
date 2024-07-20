@@ -46,7 +46,13 @@ enum class BinaryOpType
     LessThan,
     LessThanOrEqual,
     GreaterThan,
-    GreaterThanOrEqual
+    GreaterThanOrEqual,
+    Remainder,
+    BitwiseOr,
+    BitwiseAnd,
+    BitwiseXOR,
+    BitwiseLeftShift,
+    BitwiseRightShift
 };
 
 struct BinaryOp : public Expression

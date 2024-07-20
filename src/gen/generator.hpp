@@ -158,6 +158,32 @@ class ASMVisitor : public ASTVisitor
                     m_CodeGenerator.EmitOp("mov", ImmediateArg(0), RegisterArg("eax"));
                     m_CodeGenerator.EmitOp("setge", RegisterArg("al")); 
                     break;
+                case BinaryOpType::Remainder:
+                    LoadRegisters(op->rvalue, op->lvalue);
+                    m_CodeGenerator.EmitOp("cdq");
+                    m_CodeGenerator.EmitOp("idiv", RegisterArg("ecx")); 
+                    m_CodeGenerator.EmitOp("mov", RegisterArg("edx"), RegisterArg("eax")); 
+                    break; 
+                case BinaryOpType::BitwiseOr:
+                    LoadRegisters(op->lvalue, op->rvalue); 
+                    m_CodeGenerator.EmitOp("or", RegisterArg("ecx"), RegisterArg("eax")); 
+                    break;
+                case BinaryOpType::BitwiseAnd:
+                    LoadRegisters(op->lvalue, op->rvalue); 
+                    m_CodeGenerator.EmitOp("and", RegisterArg("ecx"), RegisterArg("eax")); 
+                    break;
+                case BinaryOpType::BitwiseXOR:
+                    LoadRegisters(op->lvalue, op->rvalue); 
+                    m_CodeGenerator.EmitOp("xor", RegisterArg("ecx"), RegisterArg("eax")); 
+                    break;
+                case BinaryOpType::BitwiseLeftShift:
+                    LoadRegisters(op->rvalue, op->lvalue); 
+                    m_CodeGenerator.EmitOp("sal", RegisterArg("ecx"), RegisterArg("eax"));
+                    break;
+                case BinaryOpType::BitwiseRightShift:
+                    LoadRegisters(op->rvalue, op->lvalue); 
+                    m_CodeGenerator.EmitOp("sar", RegisterArg("ecx"), RegisterArg("eax"));
+                    break;
             }
         }
 

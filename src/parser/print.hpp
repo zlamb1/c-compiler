@@ -73,6 +73,12 @@ class ASTPrinter : public ASTVisitor
                 case BinaryOpType::LessThanOrEqual: std::cout << "<="; break;
                 case BinaryOpType::GreaterThan: std::cout << ">"; break;
                 case BinaryOpType::GreaterThanOrEqual: std::cout << ">="; break;
+                case BinaryOpType::Remainder: std::cout << "%"; break; 
+                case BinaryOpType::BitwiseOr: std::cout << "|"; break;
+                case BinaryOpType::BitwiseAnd: std::cout << "&"; break;
+                case BinaryOpType::BitwiseXOR: std::cout << "^"; break;
+                case BinaryOpType::BitwiseLeftShift: std::cout << "<<"; break;
+                case BinaryOpType::BitwiseRightShift: std::cout << ">>"; break; 
             }
             op->rvalue->Accept(this);
             std::cout << ")";

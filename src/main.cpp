@@ -4,7 +4,7 @@
 #include "compiler/compiler.hpp"
 
 const std::string STAGE_NUM = "stage4";
-const std::string TEST_FILE = "precedence.c";
+const std::string TEST_FILE = "right_shift.c";
 
 int main(int argc, char *argv[])
 {

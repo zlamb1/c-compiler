@@ -23,7 +23,7 @@ const std::vector<Token>& Lexer::LexFile(const std::string& filepath)
         while (str.hasCapacity())
         {
             auto token = LexToken(str); 
-            if (token.kind != TokenKind::None)
+            if (token.kind != TokenKind::None && token.kind != TokenKind::Comment && token.kind != TokenKind::MultilineComment)
                 m_Tokens.emplace_back(token); 
         }
 
@@ -55,6 +55,16 @@ Token Lexer::LexToken(StackString& str)
                     token.kind = TokenKind::HexConstant;
                     token.value += str.pop(2);
                     continue;
+                } else if (nextTwoCharacters == "//")
+                {
+                    str.pop(2); 
+                    token.kind = TokenKind::Comment; 
+                    continue;
+                } else if (nextTwoCharacters == "/*")
+                {
+                    str.pop(2); 
+                    token.kind = TokenKind::MultilineComment; 
+                    continue; 
                 } else if (nextTwoCharacters == "&&")
                 {
                     str.pop(2); 
@@ -79,6 +89,14 @@ Token Lexer::LexToken(StackString& str)
                 {
                     str.pop(2); 
                     return Token(TokenKind::GreaterThanOrEqual); 
+                } else if (nextTwoCharacters == "<<")
+                {
+                    str.pop(2);
+                    return Token(TokenKind::LeftShift);
+                } else if (nextTwoCharacters == ">>")
+                {
+                    str.pop(2);
+                    return Token(TokenKind::RightShift); 
                 }
             }
 
@@ -123,12 +141,24 @@ Token Lexer::LexToken(StackString& str)
                 case '/':
                     token.kind = TokenKind::Slash;
                     break; 
+                case '&':
+                    token.kind = TokenKind::Ampersand;
+                    break;
+                case '|':
+                    token.kind = TokenKind::Pipe;
+                    break;
                 case '<':
                     token.kind = TokenKind::LessThan;
                     break;
                 case '>':
                     token.kind = TokenKind::GreaterThan;
                     break;
+                case '%':
+                    token.kind = TokenKind::Percent;
+                    break; 
+                case '^':
+                    token.kind = TokenKind::Caret;
+                    break; 
             }
 
             if (token.kind != TokenKind::None)
@@ -156,6 +186,21 @@ Token Lexer::LexToken(StackString& str)
                         token.value += next_char;
                     else return token;
                     break; 
+                case TokenKind::Comment:
+                    if (next_char == '\n')
+                    {
+                        str.pop(); 
+                        return token; 
+                    } else token.value += next_char; 
+                    break;
+                case TokenKind::MultilineComment:
+                    if (str.hasCapacity(2) && str.peek(2) == "*/")
+                    {
+                        str.pop(2);
+                        return token; 
+                    }
+                    else token.value += next_char; 
+                    break; 
             }
 
             switch (next_char)
@@ -176,6 +221,8 @@ Token Lexer::LexToken(StackString& str)
                 case '=':
                 case '<':
                 case '>':
+                case '%':
+                case '^': 
                     return token; 
             }
         }
