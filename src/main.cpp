@@ -3,7 +3,7 @@
 
 #include "compiler/compiler.hpp"
 
-const std::string STAGE_NUM = "stage3";
+const std::string STAGE_NUM = "stage4";
 const std::string TEST_FILE = "precedence.c";
 
 int main(int argc, char *argv[])

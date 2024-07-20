@@ -47,11 +47,39 @@ Token Lexer::LexToken(StackString& str)
                 continue;
             }
 
-            if (str.hasCapacity(2) && str.peek(2) == "0x")
+            if (str.hasCapacity(2))
             {
-                token.kind = TokenKind::HexConstant;
-                token.value += str.pop(2);
-                continue;
+                auto nextTwoCharacters = str.peek(2); 
+                if (nextTwoCharacters == "0x")
+                {
+                    token.kind = TokenKind::HexConstant;
+                    token.value += str.pop(2);
+                    continue;
+                } else if (nextTwoCharacters == "&&")
+                {
+                    str.pop(2); 
+                    return Token(TokenKind::DoubleAmpersand);
+                } else if (nextTwoCharacters == "||")
+                {
+                    str.pop(2); 
+                    return Token(TokenKind::DoublePipe); 
+                } else if (nextTwoCharacters == "==")
+                {
+                    str.pop(2);
+                    return Token(TokenKind::DoubleEquals); 
+                } else if (nextTwoCharacters == "!=")
+                {
+                    str.pop(2);
+                    return Token(TokenKind::NotEqual); 
+                } else if (nextTwoCharacters == "<=")
+                {
+                    str.pop(2);
+                    return Token(TokenKind::LessThanOrEqual);
+                } else if (nextTwoCharacters == ">=")
+                {
+                    str.pop(2); 
+                    return Token(TokenKind::GreaterThanOrEqual); 
+                }
             }
 
             if (is_digit(next_char))
@@ -95,6 +123,12 @@ Token Lexer::LexToken(StackString& str)
                 case '/':
                     token.kind = TokenKind::Slash;
                     break; 
+                case '<':
+                    token.kind = TokenKind::LessThan;
+                    break;
+                case '>':
+                    token.kind = TokenKind::GreaterThan;
+                    break;
             }
 
             if (token.kind != TokenKind::None)
@@ -136,7 +170,12 @@ Token Lexer::LexToken(StackString& str)
                 case '!':
                 case '+':
                 case '*':
-                case '/': 
+                case '/':
+                case '&':
+                case '|':
+                case '=':
+                case '<':
+                case '>':
                     return token; 
             }
         }

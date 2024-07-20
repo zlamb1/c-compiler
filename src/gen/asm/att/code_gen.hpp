@@ -25,4 +25,9 @@ class ATTCodeGenerator : public ASMCodeGenerator
         {
             return "$" + std::to_string(arg.value);
         }
+
+        std::string EvaluateArg(const LabelArg& arg) override
+        {
+            return "_" + arg.label; 
+        }
 };

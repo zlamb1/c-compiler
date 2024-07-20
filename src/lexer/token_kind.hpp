@@ -19,6 +19,14 @@ enum class TokenKind : int
     Plus,
     Asterisk,
     Slash,
+    DoubleAmpersand,
+    DoublePipe,
+    DoubleEquals,
+    NotEqual,
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
 
     None
 };
@@ -40,5 +48,13 @@ static std::unordered_map<TokenKind, std::string> TOKEN_KIND_NAMES
     { TokenKind::Plus, "+" },
     { TokenKind::Asterisk, "*" },
     { TokenKind::Slash, "/" },
+    { TokenKind::DoubleAmpersand, "&&" },
+    { TokenKind::DoublePipe, "||" },
+    { TokenKind::DoubleEquals, "==" },
+    { TokenKind::NotEqual, "!=" },
+    { TokenKind::LessThan, "<" },
+    { TokenKind::LessThanOrEqual, "<=" },
+    { TokenKind::GreaterThan, ">" },
+    { TokenKind::GreaterThanOrEqual, ">=" },
     { TokenKind::None, "None" }
 };

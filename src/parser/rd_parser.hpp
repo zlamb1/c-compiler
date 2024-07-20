@@ -16,7 +16,15 @@ static std::unordered_map<TokenKind, BinaryOpType> TOKEN_TO_BINARY_TYPE
     { TokenKind::Plus, BinaryOpType::Addition },
     { TokenKind::Minus, BinaryOpType::Subtraction },
     { TokenKind::Asterisk, BinaryOpType::Multiplication },
-    { TokenKind::Slash, BinaryOpType::Division }
+    { TokenKind::Slash, BinaryOpType::Division },
+    { TokenKind::DoublePipe, BinaryOpType::LogicalOr },
+    { TokenKind::DoubleAmpersand, BinaryOpType::LogicalAnd },
+    { TokenKind::DoubleEquals, BinaryOpType::Equal },
+    { TokenKind::NotEqual, BinaryOpType::NotEqual },
+    { TokenKind::LessThan, BinaryOpType::LessThan },
+    { TokenKind::LessThanOrEqual, BinaryOpType::LessThanOrEqual },
+    { TokenKind::GreaterThan, BinaryOpType::GreaterThan },
+    { TokenKind::GreaterThanOrEqual, BinaryOpType::GreaterThanOrEqual }
 };
 
 // Recursive-Descent Parser
@@ -30,9 +38,9 @@ class RDParser : public Parser
         AbstractSyntax* ParseFile(const std::string& filepath) override
         {
             m_Tokens = m_Lexer->LexFile(filepath); 
-            /*std::cout << "<--- Lexical Analysis --->" << std::endl;
+            std::cout << "<--- Lexical Analysis --->" << std::endl;
             for (auto& token : m_Tokens)
-                std::cout << TOKEN_KIND_NAMES[token.kind] << ": " << (token.value.empty() ? token.value : "NULL") << std::endl;*/
+                std::cout << TOKEN_KIND_NAMES[token.kind] << ": " << (!token.value.empty() ? token.value : "NULL") << std::endl;
 
             return ParseProgram(); 
         }
@@ -94,8 +102,89 @@ class RDParser : public Parser
             ret->expr = expr; 
             return ret; 
         }
-
+        
         Expression* ParseExpression()
+        {
+            auto expr = ParseLogicalAndExpression(); 
+            auto token = PeekToken(); 
+            if (token->kind == TokenKind::None) ExceptParse("Incomplete Expression"); 
+            while (token->kind == TokenKind::DoublePipe)
+            {
+                ConsumeToken(); 
+                auto type = TOKEN_TO_BINARY_TYPE[token->kind];
+                auto nextExpr = ParseLogicalAndExpression(); 
+                auto op = new BinaryOp; 
+                op->type = type; 
+                op->lvalue = expr; 
+                op->rvalue = nextExpr; 
+                expr = op; 
+                token = PeekToken();
+            }
+            return expr; 
+        }
+
+        Expression* ParseLogicalAndExpression()
+        {
+            auto expr = ParseEqualityExpression(); 
+            auto token = PeekToken(); 
+            if (token->kind == TokenKind::None) ExceptParse("Incomplete Expression"); 
+            while (token->kind == TokenKind::DoubleAmpersand)
+            {
+                ConsumeToken(); 
+                auto type = TOKEN_TO_BINARY_TYPE[token->kind];
+                auto nextExpr = ParseEqualityExpression(); 
+                auto op = new BinaryOp; 
+                op->type = type; 
+                op->lvalue = expr; 
+                op->rvalue = nextExpr; 
+                expr = op; 
+                token = PeekToken();
+            }
+            return expr; 
+        }
+
+        Expression* ParseEqualityExpression()
+        {
+            auto expr = ParseRelationalExpression(); 
+            auto token = PeekToken(); 
+            if (token->kind == TokenKind::None) ExceptParse("Incomplete Expression"); 
+            while (token->kind == TokenKind::DoubleEquals || token->kind == TokenKind::NotEqual)
+            {
+                ConsumeToken(); 
+                auto type = TOKEN_TO_BINARY_TYPE[token->kind];
+                auto nextExpr = ParseRelationalExpression(); 
+                auto op = new BinaryOp; 
+                op->type = type; 
+                op->lvalue = expr; 
+                op->rvalue = nextExpr; 
+                expr = op; 
+                token = PeekToken();
+            }
+            return expr; 
+        }
+
+        Expression* ParseRelationalExpression()
+        {
+            auto expr = ParseAdditiveExpression(); 
+            auto token = PeekToken(); 
+            if (token->kind == TokenKind::None) ExceptParse("Incomplete Expression");
+            while (token->kind == TokenKind::LessThan || token->kind == TokenKind::LessThanOrEqual ||
+                   token->kind == TokenKind::GreaterThan || token->kind == TokenKind::GreaterThanOrEqual)
+            {
+                ConsumeToken(); 
+                auto type = TOKEN_TO_BINARY_TYPE[token->kind];
+                auto nextExpr = ParseAdditiveExpression(); 
+                auto op = new BinaryOp; 
+                op->type = type;
+                op->lvalue = expr;
+                op->rvalue = nextExpr; 
+                expr = op; 
+                token = PeekToken();
+            }
+            return expr; 
+        }
+
+        Expression* ParseAdditiveExpression()
         {
             auto term = ParseTerm(); 
             auto token = PeekToken(); 

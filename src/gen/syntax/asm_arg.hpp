@@ -15,9 +15,9 @@ struct RegisterArg : public AssemblyArg
 
     std::string _register; 
 
-    void Accept(SyntaxVisitor* syntax_visitor) override
+    void Accept(SyntaxVisitor* syntaxVisitor) override
     {
-        syntax_visitor->VisitRegisterArg(this);
+        syntaxVisitor->VisitRegisterArg(this);
     }
 };
 
@@ -29,8 +29,22 @@ struct ImmediateArg : public AssemblyArg
 
     int value;
 
-    void Accept(SyntaxVisitor* syntax_visitor) override
+    void Accept(SyntaxVisitor* syntaxVisitor) override
     {
-        syntax_visitor->VisitImmediateArg(this);
+        syntaxVisitor->VisitImmediateArg(this);
+    }
+};
+
+struct LabelArg : public AssemblyArg
+{
+    LabelArg(const std::string& label) : label(label)
+    {
+    }
+
+    std::string label;
+
+    void Accept(SyntaxVisitor* syntaxVisitor) override
+    {
+        syntaxVisitor->VisitLabelArg(this); 
     }
 };

@@ -38,7 +38,15 @@ enum class BinaryOpType
     Addition,
     Subtraction,
     Multiplication,
-    Division  
+    Division,
+    LogicalOr,
+    LogicalAnd,
+    Equal,
+    NotEqual,
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual
 };
 
 struct BinaryOp : public Expression
