@@ -26,9 +26,20 @@ class CompilerBackend
         void GenerateCode(CompilerFlags flags, AbstractSyntax* ast)
         {
             if (ast == nullptr) return; 
-            auto os = std::make_shared<std::ofstream>(flags.outputpath + ".s"); 
+            auto outputpath = flags.outputpath + ".s"; 
+            auto os = std::make_shared<std::ofstream>(outputpath); 
             m_CodeGenerator->SetOutputStream(os);
-            m_ASMGenerator->GenerateSyntax(ast); 
+            try 
+            {
+                m_ASMGenerator->GenerateSyntax(ast); 
+            } catch (const std::exception& exc)
+            {
+                std::cout << exc.what() << std::endl; 
+                // clean up file
+                std::remove(outputpath.c_str());
+                os->close(); 
+                return; 
+            }
             os->close(); 
             m_Assembler->AssembleProgram(flags.outputpath + ".s", flags.outputpath);
         }

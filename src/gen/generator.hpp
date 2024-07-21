@@ -1,9 +1,42 @@
 #pragma once
 
+#include <stack>
 #include <string>
+#include <unordered_map>
 
 #include "asm/code_gen.hpp"
+#include "exc.hpp"
 #include "parser/parser.hpp"
+
+class BlockContext
+{
+public:
+    int CreateVariable(const std::string& variableName)
+    {
+        m_VariableMap[variableName] = ++m_StackIndex; 
+        return m_StackIndex * m_WordSize; 
+    }
+
+    bool HasVariable(const std::string& variableName)
+    {
+        return m_VariableMap.find(variableName) != m_VariableMap.end(); 
+    }
+
+    int GetStackOffset(const std::string& variableName)
+    {
+        if (m_VariableMap.find(variableName) == m_VariableMap.end())
+        {
+            // TODO: handle 
+        }
+        return m_VariableMap[variableName] * m_WordSize; 
+    }
+
+private:
+    // variable name : stack index
+    std::unordered_map<std::string, int> m_VariableMap; 
+    int m_StackIndex = 0;
+    int m_WordSize = -4; 
+};
 
 class ASMGenerator
 {
@@ -14,7 +47,7 @@ class ASMGenerator
 
         void GenerateSyntax(AbstractSyntax* syntax)
         {
-            switch (syntax->type)
+            switch (syntax->type())
             {
                 case SyntaxType::Program:
                     GenerateProgram(dynamic_cast<Program*>(syntax)); 
@@ -22,17 +55,29 @@ class ASMGenerator
                 case SyntaxType::Function:
                     GenerateFunction(dynamic_cast<Function*>(syntax));
                     break; 
+                case SyntaxType::StatementExpression:
+                    GenerateStatementExpression(dynamic_cast<StatementExpression*>(syntax));
+                    break;
+                case SyntaxType::Declaration:
+                    GenerateDeclaration(dynamic_cast<Declaration*>(syntax));
+                    break;
                 case SyntaxType::Return:
                     GenerateReturn(dynamic_cast<Return*>(syntax)); 
                     break; 
+                case SyntaxType::IntConstant:
+                    GenerateIntConstant(dynamic_cast<IntConstant*>(syntax)); 
+                    break;
                 case SyntaxType::UnaryOp:
                     GenerateUnaryOp(dynamic_cast<UnaryOp*>(syntax)); 
                     break;
                 case SyntaxType::BinaryOp:
                     GenerateBinaryOp(dynamic_cast<BinaryOp*>(syntax)); 
                     break; 
-                case SyntaxType::IntConstant:
-                    GenerateIntConstant(dynamic_cast<IntConstant*>(syntax)); 
+                case SyntaxType::VariableRef:
+                    GenerateVariableRef(dynamic_cast<VariableRef*>(syntax));
+                    break;
+                case SyntaxType::Assignment:
+                    GenerateAssignment(dynamic_cast<Assignment*>(syntax));
                     break;
             }
         }
@@ -44,22 +89,67 @@ class ASMGenerator
 
         void GenerateFunction(Function* function)
         {
+            m_ContextStack.push(BlockContext()); 
             m_CodeGenerator.EmitFun(function->name); 
-            // write function body
             m_CodeGenerator.IncreaseIndentation(); 
-            GenerateSyntax(function->statement);
+            // generate function prologue
+            m_CodeGenerator.EmitOp("push", RegisterArg("rbp"));
+            m_CodeGenerator.EmitOp("mov", RegisterArg("rsp"), RegisterArg("rbp"));
+            // generate function body
+            if (function->statements.size() == 0)
+                GenerateSyntax(new Return(new IntConstant(0))); 
+            bool foundReturn = false; 
+            for (size_t i = 0; i < function->statements.size(); i++)
+            {
+                auto statement = function->statements[i]; 
+                GenerateSyntax(statement);
+                if (statement->type() == SyntaxType::Return)
+                {
+                    if (foundReturn)
+                    {
+                        // TODO: error
+                    } else foundReturn = true; 
+                }
+                // generate return statement if one does not exist
+                if (i == function->statements.size() - 1 && !foundReturn)
+                    GenerateSyntax(new Return(new IntConstant(0))); 
+            }
             m_CodeGenerator.DecreaseIndentation();
+        }
+        
+
+        void GenerateStatementExpression(StatementExpression* statementExpr)
+        {
+            if (statementExpr->expr)
+                GenerateSyntax(statementExpr->expr); 
+        }
+
+        void GenerateDeclaration(Declaration* decl)
+        {
+            auto& context = m_ContextStack.top(); 
+            if (context.HasVariable(decl->name))
+                throw RedeclaredException(decl->name); 
+            auto displacement = context.CreateVariable(decl->name); 
+            if (decl->expr)
+            {
+                GenerateSyntax(decl->expr); 
+            } else m_CodeGenerator.EmitOp("movl", ImmediateArg(0), RegisterArg("eax"));
+            m_CodeGenerator.EmitOp("movl", RegisterArg("eax"), DisplacementArg("rbp", displacement)); 
         }
 
         void GenerateReturn(Return* ret)
         {
-            GenerateSyntax(ret->expr); 
+            if (ret->expr)
+                GenerateSyntax(ret->expr); 
+            // generate function epilogue
+            m_CodeGenerator.EmitOp("mov", RegisterArg("rbp"), RegisterArg("rsp")); 
+            m_CodeGenerator.EmitOp("pop", RegisterArg("rbp"));
             m_CodeGenerator.EmitOp("ret");
         }
 
         void GenerateIntConstant(IntConstant* expr)
         {
-            m_CodeGenerator.EmitOp("mov", ImmediateArg(expr->value), RegisterArg("eax")); 
+            m_CodeGenerator.EmitOp("mov", ImmediateArg(expr->value), RegisterArg(m_DestinationRegister)); 
         }
 
         void GenerateUnaryOp(UnaryOp* op)
@@ -200,14 +290,46 @@ class ASMGenerator
             }
         }
 
+        void GenerateVariableRef(VariableRef* ref)
+        {
+            auto& context = m_ContextStack.top();
+            if (!context.HasVariable(ref->name))
+                throw UndeclaredException(ref->name); 
+            int displacement = context.GetStackOffset(ref->name); 
+            m_CodeGenerator.EmitOp("movl", DisplacementArg("rbp", displacement), RegisterArg(m_DestinationRegister)); 
+        }
+
+        void GenerateAssignment(Assignment* assignment)
+        {
+            auto& context = m_ContextStack.top(); 
+            if (!context.HasVariable(assignment->lvalue))
+                throw UndeclaredException(assignment->lvalue);
+            GenerateSyntax(assignment->rvalue); 
+            int displacement = context.GetStackOffset(assignment->lvalue);
+            m_CodeGenerator.EmitOp("movl", RegisterArg("eax"), DisplacementArg("rbp", displacement)); 
+        }
+
     private: 
         ASMCodeGenerator& m_CodeGenerator; 
+        std::stack<BlockContext> m_ContextStack;
+        std::string m_DestinationRegister = "eax"; 
+
+        void ResetDestination()
+        {
+            m_DestinationRegister = "eax"; 
+        }
+
+        void SetDestination(const std::string& newDestination)
+        {
+            m_DestinationRegister = newDestination; 
+        }
 
         void LoadRegisters(Expression* lvalue, Expression* rvalue)
         {
-            GenerateSyntax(lvalue); 
-            m_CodeGenerator.EmitOp("push", RegisterArg("rax")); 
+            SetDestination("eax");
+            GenerateSyntax(lvalue);
+            SetDestination("ecx"); 
             GenerateSyntax(rvalue); 
-            m_CodeGenerator.EmitOp("pop", RegisterArg("rcx"));
+            ResetDestination(); 
         }
 };

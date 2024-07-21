@@ -59,6 +59,12 @@ class Parser
             return &token; 
         }
 
+        void RevertToken()
+        {
+            if (m_Position <= 0) return;
+            m_Position--;
+        }
+
         void ConsumeToken()
         {
             if (m_Position >= m_Tokens.size()) return; 

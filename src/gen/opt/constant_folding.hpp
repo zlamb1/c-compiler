@@ -4,12 +4,12 @@ namespace
 {
     static bool is_constant(AbstractSyntax* syntax)
     {
-        return syntax->type == SyntaxType::IntConstant; 
+        return syntax->type() == SyntaxType::IntConstant; 
     }
 
     static Expression* FoldExpression(Expression* expr)
     {
-        switch (expr->type)
+        switch (expr->type())
         {
             case SyntaxType::UnaryOp:
             {
@@ -57,6 +57,8 @@ namespace
                             return new IntConstant(lvalue == rvalue);
                         case BinaryOpType::NotEqual:
                             return new IntConstant(lvalue != rvalue);
+                        case BinaryOpType::Remainder:
+                            return new IntConstant(lvalue % rvalue); 
                         case BinaryOpType::LessThan:
                             return new IntConstant(lvalue < rvalue);
                         case BinaryOpType::LessThanOrEqual:
@@ -88,7 +90,7 @@ namespace
 
 static AbstractSyntax* FoldConstants(AbstractSyntax* syntax)
 {
-    switch (syntax->type)
+    switch (syntax->type())
     {
         case SyntaxType::Program:
         {
@@ -98,9 +100,16 @@ static AbstractSyntax* FoldConstants(AbstractSyntax* syntax)
         }
         case SyntaxType::Function:
         {
-            auto func = dynamic_cast<Function*>(syntax); 
-            FoldConstants(func->statement); 
+            auto function = dynamic_cast<Function*>(syntax); 
+            for (auto statement : function->statements)
+                FoldConstants(statement); 
             break; 
+        }
+        case SyntaxType::StatementExpression:
+        {
+            auto statementExpr = dynamic_cast<StatementExpression*>(syntax);
+            if (statementExpr->expr) statementExpr->expr = FoldExpression(statementExpr->expr);
+            break;
         }
         case SyntaxType::Return:
         {

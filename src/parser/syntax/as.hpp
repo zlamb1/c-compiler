@@ -7,22 +7,32 @@ enum class SyntaxType : int
     Program,
     Function,
     // Statements
+    StatementExpression,
+    Declaration,
     Return,
     // Expressions
     UnaryOp,
     BinaryOp,
-    IntConstant
+    IntConstant,
+    VariableRef,
+    Assignment
 };
 
-struct AbstractSyntax
+class AbstractSyntax
 {
-    SyntaxType type; 
-
-    AbstractSyntax(SyntaxType type) : type(type) 
+public:
+    AbstractSyntax(SyntaxType type) : _type(type) 
     {
     }
     
     virtual ~AbstractSyntax() = default;
 
+    SyntaxType type()
+    {
+        return _type; 
+    }
+
     virtual void Accept(ASTVisitor* visitor) = 0;
+private:
+    SyntaxType _type; 
 };

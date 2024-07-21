@@ -2,14 +2,35 @@
 
 #include "visitor.hpp"
 
-struct AssemblyArg
+enum class ArgType : int
 {
+    Register,
+    Displacement,
+    Immediate,
+    Label
+};
+
+class AssemblyArg
+{
+public:
+    AssemblyArg(ArgType type) : _type(type)
+    {
+    }
+    virtual ~AssemblyArg() = default; 
+
+    ArgType type() const
+    {
+        return _type; 
+    }
+
     virtual void Accept(SyntaxVisitor* syntax_visitor) = 0;
+private:
+    ArgType _type; 
 };
 
 struct RegisterArg : public AssemblyArg
 {
-    RegisterArg(const std::string& _register) : _register(_register)
+    RegisterArg(const std::string& _register) : AssemblyArg(ArgType::Register), _register(_register)
     {
     }
 
@@ -21,9 +42,24 @@ struct RegisterArg : public AssemblyArg
     }
 };
 
+struct DisplacementArg : public AssemblyArg
+{
+    DisplacementArg(const std::string& _register, int displacement) : AssemblyArg(ArgType::Displacement), _register(_register), displacement(displacement)
+    {
+    }
+
+    std::string _register; 
+    int displacement;
+
+    void Accept(SyntaxVisitor* syntaxVisitor)
+    {
+        syntaxVisitor->VisitDisplacementArg(this); 
+    }
+};
+
 struct ImmediateArg : public AssemblyArg
 {
-    ImmediateArg(int value) : value(value)
+    ImmediateArg(int value) : AssemblyArg(ArgType::Immediate), value(value)
     {
     }
 
@@ -37,7 +73,7 @@ struct ImmediateArg : public AssemblyArg
 
 struct LabelArg : public AssemblyArg
 {
-    LabelArg(const std::string& label) : label(label)
+    LabelArg(const std::string& label) : AssemblyArg(ArgType::Label), label(label)
     {
     }
 

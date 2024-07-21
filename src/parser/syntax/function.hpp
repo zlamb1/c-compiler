@@ -1,15 +1,16 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "statement.hpp"
 
 struct Function : public AbstractSyntax
 {
     std::string name; 
-    Statement* statement = nullptr; 
+    std::vector<Statement*> statements{}; 
 
-    Function(const std::string& name, Statement* statement) : AbstractSyntax(SyntaxType::Function), name(name), statement(statement)
+    Function(const std::string& name) : AbstractSyntax(SyntaxType::Function), name(name)
     {
     }
 

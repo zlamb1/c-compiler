@@ -21,6 +21,11 @@ class ATTCodeGenerator : public ASMCodeGenerator
             return "%" + arg._register; 
         }
 
+        std::string EvaluateArg(const DisplacementArg& arg) override
+        {
+            return std::to_string(arg.displacement) + "(%" + arg._register + ")";
+        }
+
         std::string EvaluateArg(const ImmediateArg& arg) override
         {
             return "$" + std::to_string(arg.value);

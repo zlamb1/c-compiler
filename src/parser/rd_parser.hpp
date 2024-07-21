@@ -86,23 +86,67 @@ class RDParser : public Parser
             if (token->kind != TokenKind::RightParenthesis) ExceptParse("Malformed Function Definition"); 
             token = NextToken(); 
             if (token->kind != TokenKind::LeftBrace) ExceptParse("Expected Block: expected '{'");
-            auto statement = ParseStatement(); 
-            token = NextToken(); 
-            if (token->kind != TokenKind::RightBrace) ExceptParse("Unclosed Block: expected '}'");
-            return new Function(name, statement);
+            auto function = new Function(name); 
+            token = PeekToken();
+            bool foundReturn = false;
+            while (token->kind != TokenKind::RightBrace)
+            {
+                if (token->kind == TokenKind::None) ExceptParse("Unclosed Block: expected '}'");
+                auto statement = ParseStatement();
+                // discard statements encountered after return
+                if (!foundReturn) function->statements.emplace_back(statement); 
+                if (statement->type() == SyntaxType::Return) foundReturn = true; 
+                token = PeekToken(); 
+            }
+            return function;
         }
 
         Statement* ParseStatement()
         {
-            auto token = NextToken(); 
-            if (token->kind != TokenKind::Keyword || token->value != "return") ExceptParse("Invalid Statement"); 
-            auto expr = ParseExpression(); 
+            auto token = PeekToken(); 
+            Statement* statement; 
+            if (token->kind == TokenKind::Keyword)
+            {
+                ConsumeToken(); 
+                if (token->value == "return") statement = new Return(ParseExpression()); 
+                else if (token->value == "int")
+                {
+                    token = NextToken();
+                    if (token->kind != TokenKind::Identifier) ExceptParse("Expected Symbol Identifier");
+                    auto name = token->value; 
+                    token = PeekToken();
+                    if (token->kind == TokenKind::Equal)
+                    {
+                        ConsumeToken(); 
+                        statement = new Declaration(name, ParseExpression()); 
+                    } else statement = new Declaration(name); 
+                }
+            } else if (token->kind == TokenKind::Semicolon) statement = new StatementExpression(nullptr);  
+            else statement = new StatementExpression(ParseExpression()); 
             token = NextToken(); 
             if (token->kind != TokenKind::Semicolon) ExceptParse("Unclosed Statement: expected ';'");
-            return new Return(expr); 
+            return statement; 
         }
-        
+
         Expression* ParseExpression()
+        {
+            auto token = PeekToken(); 
+            if (token->kind == TokenKind::Identifier)
+            {
+                ConsumeToken(); 
+                auto lvalue = token->value; 
+                token = PeekToken(); 
+                if (token->kind != TokenKind::Equal)
+                {
+                    RevertToken(); 
+                    return ParseLogicalOrExpression(); 
+                }
+                ConsumeToken(); 
+                return new Assignment(lvalue, ParseExpression());
+            } else return ParseLogicalOrExpression(); 
+        }
+
+        Expression* ParseLogicalOrExpression()
         {
             auto expr = ParseLogicalAndExpression(); 
             auto token = PeekToken(); 
@@ -277,9 +321,10 @@ class RDParser : public Parser
                 auto factor = ParseFactor(); 
                 return new UnaryOp(TOKEN_TO_UNARY_TYPE[token->kind], factor); 
             } else if (token->kind == TokenKind::IntConstant || token->kind == TokenKind::HexConstant)
-            {
                 return new IntConstant(parse_c_int(token->value)); 
-            } else ExceptParse("Invalid Factor: " + TOKEN_KIND_NAMES[token->kind]); 
+            else if (token->kind == TokenKind::Identifier) 
+                return new VariableRef(token->value);
+            else ExceptParse("Invalid Factor: " + TOKEN_KIND_NAMES[token->kind]); 
             return nullptr; 
         }
 };

@@ -159,6 +159,9 @@ Token Lexer::LexToken(StackString& str)
                 case '^':
                     token.kind = TokenKind::Caret;
                     break; 
+                case '=':
+                    token.kind = TokenKind::Equal;
+                    break;
             }
 
             if (token.kind != TokenKind::None)

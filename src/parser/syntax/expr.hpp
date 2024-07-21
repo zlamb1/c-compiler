@@ -83,3 +83,32 @@ struct BinaryOp : public Expression
         visitor->VisitBinaryOp(this);
     }
 };
+
+struct VariableRef : public Expression
+{
+    std::string name; 
+
+    VariableRef(const std::string& name) : Expression(SyntaxType::VariableRef), name(name)
+    {
+    }
+
+    void Accept(ASTVisitor* visitor) override
+    {
+        visitor->VisitVariableRef(this); 
+    }
+};
+
+struct Assignment : public Expression
+{
+    std::string lvalue; 
+    Expression* rvalue; 
+
+    Assignment(const std::string& lvalue, Expression* rvalue) : Expression(SyntaxType::Assignment), lvalue(lvalue), rvalue(rvalue)
+    {
+    }
+
+    void Accept(ASTVisitor* visitor) override
+    {
+        visitor->VisitAssignment(this);
+    }
+};

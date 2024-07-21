@@ -23,9 +23,32 @@ class ASTPrinter : public ASTVisitor
         {
             std::cout << m_Spaces << function->name << "(" << std::endl;
             SetIndent(m_Indent + 1); 
-            function->statement->Accept(this); 
+            for (auto statement : function->statements)
+                statement->Accept(this);
             SetIndent(m_Indent - 1); 
             std::cout << m_Spaces << ")" << std::endl;
+        }
+
+        void VisitStatementExpression(StatementExpression* statementExpr) override
+        {
+            if (statementExpr->expr)
+            {
+                std::cout << m_Spaces;
+                statementExpr->expr->Accept(this);
+                std::cout << ";\n";
+            } 
+            else std::cout << m_Spaces << "NULL STATEMENT;" << std::endl;
+        }
+
+        void VisitDeclaration(Declaration* decl) override
+        {
+            if (decl->expr)
+            {
+                std::cout << m_Spaces << decl->name << " = ";
+                decl->expr->Accept(this); 
+                std::cout << ";\n";
+            }
+            else std::cout << m_Spaces << decl->name << ";" << std::endl;
         }
 
         void VisitReturn(Return* ret) override
@@ -36,7 +59,7 @@ class ASTPrinter : public ASTVisitor
             ret->expr->Accept(this); 
             std::cout << "\n";
             SetIndent(m_Indent - 1); 
-            std::cout << m_Spaces << ")" << std::endl;
+            std::cout << m_Spaces << ");" << std::endl;
         }
 
         void VisitIntConstant(IntConstant* constant) override
@@ -83,7 +106,18 @@ class ASTPrinter : public ASTVisitor
             op->rvalue->Accept(this);
             std::cout << ")";
         }
-    
+
+        void VisitVariableRef(VariableRef* ref) override
+        {
+            std::cout << ref->name; 
+        }
+
+        void VisitAssignment(Assignment* assignment) override
+        {
+            std::cout << assignment->lvalue << " = ";
+            assignment->rvalue->Accept(this);
+        }
+
     private:
         size_t m_Indent = 0; 
         size_t m_IndentSize = 2; 

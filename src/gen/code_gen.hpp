@@ -19,7 +19,7 @@ class CodeGenerator
         {
             m_OutputStream = outputstream; 
         }
-
+        
     protected: 
         std::shared_ptr<std::ostream> m_OutputStream = nullptr; 
 

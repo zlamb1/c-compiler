@@ -3,8 +3,8 @@
 
 #include "compiler/compiler.hpp"
 
-const std::string STAGE_NUM = "stage2";
-const std::string TEST_FILE = "neg.c";
+const std::string STAGE_NUM = "stage4";
+const std::string TEST_FILE = "skip_on_failure_multi_short_circuit.c";
 
 int main(int argc, char *argv[])
 {
