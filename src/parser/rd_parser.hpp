@@ -69,9 +69,7 @@ class RDParser : public Parser
 
         Program* ParseProgram()
         {
-            auto function = ParseFunction(); 
-            Program* p = new Program; 
-            p->function = function; 
+            Program* p = new Program(ParseFunction()); 
             return p; 
         }
 
@@ -91,10 +89,7 @@ class RDParser : public Parser
             auto statement = ParseStatement(); 
             token = NextToken(); 
             if (token->kind != TokenKind::RightBrace) ExceptParse("Unclosed Block: expected '}'");
-            Function* func = new Function;
-            func->name = name; 
-            func->statement = statement; 
-            return func; 
+            return new Function(name, statement);
         }
 
         Statement* ParseStatement()
@@ -104,9 +99,7 @@ class RDParser : public Parser
             auto expr = ParseExpression(); 
             token = NextToken(); 
             if (token->kind != TokenKind::Semicolon) ExceptParse("Unclosed Statement: expected ';'");
-            auto ret = new Return; 
-            ret->expr = expr; 
-            return ret; 
+            return new Return(expr); 
         }
         
         Expression* ParseExpression()
@@ -119,11 +112,7 @@ class RDParser : public Parser
                 ConsumeToken(); 
                 auto type = TOKEN_TO_BINARY_TYPE[token->kind];
                 auto nextExpr = ParseLogicalAndExpression(); 
-                auto op = new BinaryOp; 
-                op->type = type; 
-                op->lvalue = expr; 
-                op->rvalue = nextExpr; 
-                expr = op; 
+                expr = new BinaryOp(type, expr, nextExpr); 
                 token = PeekToken();
             }
             return expr; 
@@ -139,11 +128,7 @@ class RDParser : public Parser
                 ConsumeToken(); 
                 auto type = TOKEN_TO_BINARY_TYPE[token->kind];
                 auto nextExpr = ParseBitwiseOrExpression(); 
-                auto op = new BinaryOp; 
-                op->type = type; 
-                op->lvalue = expr; 
-                op->rvalue = nextExpr; 
-                expr = op; 
+                expr = new BinaryOp(type, expr, nextExpr); 
                 token = PeekToken();
             }
             return expr; 
@@ -159,11 +144,7 @@ class RDParser : public Parser
                 ConsumeToken(); 
                 auto type = TOKEN_TO_BINARY_TYPE[token->kind];
                 auto nextExpr = ParseBitwiseXORExpression(); 
-                auto op = new BinaryOp; 
-                op->type = type; 
-                op->lvalue = expr; 
-                op->rvalue = nextExpr; 
-                expr = op; 
+                expr = new BinaryOp(type, expr, nextExpr); 
                 token = PeekToken();
             }
             return expr; 
@@ -179,11 +160,7 @@ class RDParser : public Parser
                 ConsumeToken(); 
                 auto type = TOKEN_TO_BINARY_TYPE[token->kind];
                 auto nextExpr = ParseBitwiseAndExpression(); 
-                auto op = new BinaryOp; 
-                op->type = type; 
-                op->lvalue = expr; 
-                op->rvalue = nextExpr; 
-                expr = op; 
+                expr = new BinaryOp(type, expr, nextExpr); 
                 token = PeekToken();
             }
             return expr; 
@@ -199,11 +176,7 @@ class RDParser : public Parser
                 ConsumeToken(); 
                 auto type = TOKEN_TO_BINARY_TYPE[token->kind];
                 auto nextExpr = ParseEqualityExpression(); 
-                auto op = new BinaryOp; 
-                op->type = type; 
-                op->lvalue = expr; 
-                op->rvalue = nextExpr; 
-                expr = op; 
+                expr = new BinaryOp(type, expr, nextExpr); 
                 token = PeekToken();
             }
             return expr; 
@@ -219,11 +192,7 @@ class RDParser : public Parser
                 ConsumeToken(); 
                 auto type = TOKEN_TO_BINARY_TYPE[token->kind];
                 auto nextExpr = ParseRelationalExpression(); 
-                auto op = new BinaryOp; 
-                op->type = type; 
-                op->lvalue = expr; 
-                op->rvalue = nextExpr; 
-                expr = op; 
+                expr = new BinaryOp(type, expr, nextExpr); 
                 token = PeekToken();
             }
             return expr; 
@@ -240,11 +209,7 @@ class RDParser : public Parser
                 ConsumeToken(); 
                 auto type = TOKEN_TO_BINARY_TYPE[token->kind];
                 auto nextExpr = ParseShiftExpression(); 
-                auto op = new BinaryOp; 
-                op->type = type;
-                op->lvalue = expr;
-                op->rvalue = nextExpr; 
-                expr = op; 
+                expr = new BinaryOp(type, expr, nextExpr); 
                 token = PeekToken();
             }
             return expr; 
@@ -260,11 +225,7 @@ class RDParser : public Parser
                 ConsumeToken(); 
                 auto type = TOKEN_TO_BINARY_TYPE[token->kind];
                 auto nextExpr = ParseAdditiveExpression(); 
-                auto op = new BinaryOp; 
-                op->type = type;
-                op->lvalue = expr;
-                op->rvalue = nextExpr; 
-                expr = op; 
+                expr = new BinaryOp(type, expr, nextExpr); 
                 token = PeekToken();
             }
             return expr; 
@@ -280,11 +241,7 @@ class RDParser : public Parser
                 ConsumeToken(); 
                 auto type = TOKEN_TO_BINARY_TYPE[token->kind]; 
                 auto nextTerm = ParseTerm(); 
-                auto op = new BinaryOp; 
-                op->type = type; 
-                op->lvalue = term;
-                op->rvalue = nextTerm;
-                term = op; 
+                term = new BinaryOp(type, term, nextTerm); 
                 token = PeekToken(); 
             }
             return term; 
@@ -300,11 +257,7 @@ class RDParser : public Parser
                 ConsumeToken(); 
                 auto type = TOKEN_TO_BINARY_TYPE[token->kind]; 
                 auto nextFactor = ParseFactor(); 
-                auto op = new BinaryOp; 
-                op->type = type; 
-                op->lvalue = factor;
-                op->rvalue = nextFactor;
-                factor = op; 
+                factor = new BinaryOp(type, factor, nextFactor); 
                 token = PeekToken(); 
             }
             return factor; 
@@ -322,15 +275,10 @@ class RDParser : public Parser
             } else if (TOKEN_TO_UNARY_TYPE.find(token->kind) != TOKEN_TO_UNARY_TYPE.end())
             {
                 auto factor = ParseFactor(); 
-                auto op = new UnaryOp;
-                op->type = TOKEN_TO_UNARY_TYPE[token->kind];
-                op->expr = factor; 
-                return op; 
+                return new UnaryOp(TOKEN_TO_UNARY_TYPE[token->kind], factor); 
             } else if (token->kind == TokenKind::IntConstant || token->kind == TokenKind::HexConstant)
             {
-                auto expr = new IntExpr; 
-                expr->value = parse_c_int(token->value); 
-                return expr; 
+                return new IntConstant(parse_c_int(token->value)); 
             } else ExceptParse("Invalid Factor: " + TOKEN_KIND_NAMES[token->kind]); 
             return nullptr; 
         }

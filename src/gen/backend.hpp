@@ -16,7 +16,7 @@ class CompilerBackend
             #ifdef __linux__
             m_CodeGenerator = CreateCodeGenerator();
             auto& ref = *dynamic_cast<ASMCodeGenerator*>(m_CodeGenerator.get()); 
-            m_Visitor = CreateASTVisitor(ref);  
+            m_ASMGenerator = CreateASMGenerator(ref);  
             m_Assembler = std::make_unique<GCCAssembler>(); 
             #else
             assert("unsupported platform");
@@ -28,14 +28,14 @@ class CompilerBackend
             if (ast == nullptr) return; 
             auto os = std::make_shared<std::ofstream>(flags.outputpath + ".s"); 
             m_CodeGenerator->SetOutputStream(os);
-            ast->Accept(m_Visitor.get()); 
+            m_ASMGenerator->GenerateSyntax(ast); 
             os->close(); 
             m_Assembler->AssembleProgram(flags.outputpath + ".s", flags.outputpath);
         }
 
     private:
         std::shared_ptr<CodeGenerator> m_CodeGenerator;
-        std::shared_ptr<ASTVisitor> m_Visitor;
+        std::shared_ptr<ASMGenerator> m_ASMGenerator;
 
         std::unique_ptr<Assembler> m_Assembler;  
 

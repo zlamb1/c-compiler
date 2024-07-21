@@ -31,4 +31,5 @@ class GCCAssembler : public Assembler
 static std::shared_ptr<Assembler> CreateAssembler()
 {
     assert("not yet implemented");
+    return nullptr; 
 }

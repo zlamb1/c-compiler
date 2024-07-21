@@ -5,42 +5,67 @@
 #include "asm/code_gen.hpp"
 #include "parser/parser.hpp"
 
-class ASMVisitor : public ASTVisitor
+class ASMGenerator
 {
     public:
-        ASMVisitor(ASMCodeGenerator& codeGenerator) : m_CodeGenerator(codeGenerator)
+        ASMGenerator(ASMCodeGenerator& codeGenerator) : m_CodeGenerator(codeGenerator)
         {
         }
 
-        void VisitProgram(Program* program) override
+        void GenerateSyntax(AbstractSyntax* syntax)
         {
-            VisitFunction(program->function); 
+            switch (syntax->type)
+            {
+                case SyntaxType::Program:
+                    GenerateProgram(dynamic_cast<Program*>(syntax)); 
+                    break;
+                case SyntaxType::Function:
+                    GenerateFunction(dynamic_cast<Function*>(syntax));
+                    break; 
+                case SyntaxType::Return:
+                    GenerateReturn(dynamic_cast<Return*>(syntax)); 
+                    break; 
+                case SyntaxType::UnaryOp:
+                    GenerateUnaryOp(dynamic_cast<UnaryOp*>(syntax)); 
+                    break;
+                case SyntaxType::BinaryOp:
+                    GenerateBinaryOp(dynamic_cast<BinaryOp*>(syntax)); 
+                    break; 
+                case SyntaxType::IntConstant:
+                    GenerateIntConstant(dynamic_cast<IntConstant*>(syntax)); 
+                    break;
+            }
         }
 
-        void VisitFunction(Function* function) override
+        void GenerateProgram(Program* program)
+        {
+            GenerateFunction(program->function); 
+        }
+
+        void GenerateFunction(Function* function)
         {
             m_CodeGenerator.EmitFun(function->name); 
             // write function body
             m_CodeGenerator.IncreaseIndentation(); 
-            function->statement->Accept(this); 
+            GenerateSyntax(function->statement);
             m_CodeGenerator.DecreaseIndentation();
         }
 
-        void VisitReturn(Return* ret) override
+        void GenerateReturn(Return* ret)
         {
-            ret->expr->Accept(this);
+            GenerateSyntax(ret->expr); 
             m_CodeGenerator.EmitOp("ret");
         }
 
-        void VisitIntExpr(IntExpr* expr) override
+        void GenerateIntConstant(IntConstant* expr)
         {
             m_CodeGenerator.EmitOp("mov", ImmediateArg(expr->value), RegisterArg("eax")); 
         }
 
-        void VisitUnaryOp(UnaryOp* op) override
+        void GenerateUnaryOp(UnaryOp* op)
         {
-            op->expr->Accept(this); 
-            switch (op->type)
+            GenerateSyntax(op->expr); 
+            switch (op->opType)
             {
                 case UnaryOpType::Negation:
                     m_CodeGenerator.EmitOp("neg", RegisterArg("eax")); 
@@ -56,50 +81,38 @@ class ASMVisitor : public ASTVisitor
             }
         }
 
-        void VisitBinaryOp(BinaryOp* op) override
+        void GenerateBinaryOp(BinaryOp* op)
         {
-            switch (op->type)
+            switch (op->opType)
             {
                 case BinaryOpType::Addition:
-                    op->lvalue->Accept(this); 
-                    m_CodeGenerator.EmitOp("push", RegisterArg("rax")); 
-                    op->rvalue->Accept(this); 
-                    m_CodeGenerator.EmitOp("pop", RegisterArg("rcx"));
+                    LoadRegisters(op->lvalue, op->rvalue); 
                     m_CodeGenerator.EmitOp("add", RegisterArg("ecx"), RegisterArg("eax")); 
                     break;
                 case BinaryOpType::Subtraction:
-                    op->rvalue->Accept(this); 
-                    m_CodeGenerator.EmitOp("push", RegisterArg("rax")); 
-                    op->lvalue->Accept(this); 
-                    m_CodeGenerator.EmitOp("pop", RegisterArg("rcx"));
+                    LoadRegisters(op->rvalue, op->lvalue); 
                     m_CodeGenerator.EmitOp("sub", RegisterArg("ecx"), RegisterArg("eax"));
                     break;
                 case BinaryOpType::Multiplication:
-                    op->lvalue->Accept(this); 
-                    m_CodeGenerator.EmitOp("push", RegisterArg("rax")); 
-                    op->rvalue->Accept(this); 
-                    m_CodeGenerator.EmitOp("pop", RegisterArg("rcx"));
+                    LoadRegisters(op->lvalue, op->rvalue); 
                     m_CodeGenerator.EmitOp("imul", RegisterArg("ecx"), RegisterArg("eax"));
                     break;
                 case BinaryOpType::Division:
-                    op->rvalue->Accept(this);
-                    m_CodeGenerator.EmitOp("push", RegisterArg("rax")); 
-                    op->lvalue->Accept(this); 
+                    LoadRegisters(op->rvalue, op->lvalue); 
                     m_CodeGenerator.EmitOp("cdq");
-                    m_CodeGenerator.EmitOp("pop", RegisterArg("rcx"));
                     m_CodeGenerator.EmitOp("idiv", RegisterArg("ecx")); 
                     break; 
                 case BinaryOpType::LogicalOr: 
                 {
                     auto clause2 = m_CodeGenerator.GenerateLabel();
                     auto end = m_CodeGenerator.GenerateLabel(); 
-                    op->lvalue->Accept(this);
+                    GenerateSyntax(op->lvalue); 
                     m_CodeGenerator.EmitOp("cmp", ImmediateArg(0), RegisterArg("eax"));
                     m_CodeGenerator.EmitOp("je", clause2); 
                     m_CodeGenerator.EmitOp("mov", ImmediateArg(1), RegisterArg("eax"));
                     m_CodeGenerator.EmitOp("jmp", end);
                     m_CodeGenerator.EmitLabel(clause2);
-                    op->rvalue->Accept(this);
+                    GenerateSyntax(op->rvalue); 
                     m_CodeGenerator.EmitOp("cmp", ImmediateArg(0), RegisterArg("eax")); 
                     m_CodeGenerator.EmitOp("mov", ImmediateArg(0), RegisterArg("eax")); 
                     m_CodeGenerator.EmitOp("setne", RegisterArg("al")); 
@@ -110,12 +123,12 @@ class ASMVisitor : public ASTVisitor
                 {
                     auto clause2 = m_CodeGenerator.GenerateLabel();
                     auto end = m_CodeGenerator.GenerateLabel(); 
-                    op->lvalue->Accept(this);
+                    GenerateSyntax(op->lvalue); 
                     m_CodeGenerator.EmitOp("cmp", ImmediateArg(0), RegisterArg("eax"));
                     m_CodeGenerator.EmitOp("jne", clause2); 
                     m_CodeGenerator.EmitOp("jmp", end);
                     m_CodeGenerator.EmitLabel(clause2);
-                    op->rvalue->Accept(this);
+                    GenerateSyntax(op->rvalue); 
                     m_CodeGenerator.EmitOp("cmp", ImmediateArg(0), RegisterArg("eax")); 
                     m_CodeGenerator.EmitOp("mov", ImmediateArg(0), RegisterArg("eax")); 
                     m_CodeGenerator.EmitOp("setne", RegisterArg("al")); 
@@ -192,9 +205,9 @@ class ASMVisitor : public ASTVisitor
 
         void LoadRegisters(Expression* lvalue, Expression* rvalue)
         {
-            lvalue->Accept(this); 
+            GenerateSyntax(lvalue); 
             m_CodeGenerator.EmitOp("push", RegisterArg("rax")); 
-            rvalue->Accept(this); 
+            GenerateSyntax(rvalue); 
             m_CodeGenerator.EmitOp("pop", RegisterArg("rcx"));
         }
 };

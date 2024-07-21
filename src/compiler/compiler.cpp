@@ -31,14 +31,16 @@ void Compiler::CompileProgram()
     try 
     {
         auto ast = m_Parser->ParseFile(m_Flags.filepath); 
-        m_Parser->PrintTree(ast); 
-        
         if (ast == nullptr)
         {
             LogError("Failed to generate abstract syntax tree."); 
             return;
         }
-
+        // constant folding
+        FoldConstants(ast);
+        // print tree
+        m_Parser->PrintTree(ast); 
+        // generate x86-64
         m_CompilerBackend->GenerateCode(m_Flags, ast); 
     } catch (ParseException exc)
     {

@@ -4,14 +4,23 @@
 
 struct Expression : public AbstractSyntax
 {
+    Expression(SyntaxType type) : AbstractSyntax(type) 
+    {
+    }
+    virtual ~Expression() = default; 
 };
 
-struct IntExpr : public Expression
+struct IntConstant : public Expression
 {
     int value;
+
+    IntConstant(int value) : Expression(SyntaxType::IntConstant), value(value)
+    {
+    }
+
     void Accept(ASTVisitor* visitor) override
     {
-        visitor->VisitIntExpr(this); 
+        visitor->VisitIntConstant(this); 
     } 
 };
 
@@ -24,8 +33,12 @@ enum class UnaryOpType : int
 
 struct UnaryOp : public Expression
 {
-    UnaryOpType type; 
+    UnaryOpType opType; 
     Expression* expr; 
+
+    UnaryOp(UnaryOpType opType, Expression* expr) : Expression(SyntaxType::UnaryOp), opType(opType), expr(expr)
+    {
+    }
 
     void Accept(ASTVisitor* visitor) override
     {
@@ -57,9 +70,13 @@ enum class BinaryOpType
 
 struct BinaryOp : public Expression
 {
-    BinaryOpType type; 
+    BinaryOpType opType; 
     Expression* lvalue; 
     Expression* rvalue; 
+
+    BinaryOp(BinaryOpType opType, Expression* lvalue, Expression* rvalue) : Expression(SyntaxType::BinaryOp), opType(opType), lvalue(lvalue), rvalue(rvalue)
+    {
+    }
 
     void Accept(ASTVisitor* visitor) override
     {

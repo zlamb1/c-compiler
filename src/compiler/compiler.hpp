@@ -7,6 +7,7 @@
 #include "flags.hpp"
 #include "gen/backend.hpp"
 #include "gen/code_gen.hpp"
+#include "gen/opt/constant_folding.hpp"
 #include "gen/def.hpp"
 #include "lexer/lexer.hpp"
 #include "parser/rd_parser.hpp"

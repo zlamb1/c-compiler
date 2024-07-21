@@ -39,14 +39,14 @@ class ASTPrinter : public ASTVisitor
             std::cout << m_Spaces << ")" << std::endl;
         }
 
-        void VisitIntExpr(IntExpr* expr) override
+        void VisitIntConstant(IntConstant* constant) override
         {
-            std::cout << "IntExpr(" << expr->value << ")";
+            std::cout << "IntConstant(" << constant->value << ")";
         }
 
         void VisitUnaryOp(UnaryOp* op) override
         {
-            switch (op->type)
+            switch (op->opType)
             {
                 case UnaryOpType::Negation: std::cout << "-"; break;
                 case UnaryOpType::Complement: std::cout << "~"; break;
@@ -59,7 +59,7 @@ class ASTPrinter : public ASTVisitor
         {
             std::cout << "(";
             op->lvalue->Accept(this); 
-            switch (op->type)
+            switch (op->opType)
             {
                 case BinaryOpType::Addition: std::cout << "+"; break;
                 case BinaryOpType::Subtraction: std::cout << "-"; break;

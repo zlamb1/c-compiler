@@ -12,10 +12,10 @@ static std::shared_ptr<CodeGenerator> CreateCodeGenerator()
     return nullptr; 
 }
 
-static std::shared_ptr<ASTVisitor> CreateASTVisitor(ASMCodeGenerator& codeGenerator)
+static std::shared_ptr<ASMGenerator> CreateASMGenerator(ASMCodeGenerator& codeGenerator)
 {
     #ifdef __linux__
-    return std::make_shared<ASMVisitor>(codeGenerator); 
+    return std::make_shared<ASMGenerator>(codeGenerator); 
     #endif
     return nullptr; 
 }
