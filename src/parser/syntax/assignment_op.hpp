@@ -31,11 +31,6 @@ public:
     {
         return opType; 
     }
-    
-    void Accept(ASTVisitor* visitor) override
-    {
-        visitor->VisitAssignmentOp(this); 
-    }
 private:
     AssignmentOpType opType; 
 };

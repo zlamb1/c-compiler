@@ -13,9 +13,4 @@ struct Function : public AbstractSyntax
     Function(const std::string& name) : AbstractSyntax(SyntaxType::Function), name(name)
     {
     }
-
-    void Accept(ASTVisitor* visitor) override
-    {
-        visitor->VisitFunction(this); 
-    }
 };

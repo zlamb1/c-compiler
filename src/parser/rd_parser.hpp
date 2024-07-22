@@ -30,7 +30,7 @@ class RDParser : public Parser
             {
                 std::cout << std::endl;
                 std::cout << "<--- Abstract Syntax Tree --->" << std::endl;
-                pretty_print_ast(ast);
+                PrettyPrintAST(ast);
             }
         }
 

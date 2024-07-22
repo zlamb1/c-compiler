@@ -17,11 +17,6 @@ struct IntConstant : public Expression
     IntConstant(int value) : Expression(SyntaxType::IntConstant), value(value)
     {
     }
-
-    void Accept(ASTVisitor* visitor) override
-    {
-        visitor->VisitIntConstant(this); 
-    } 
 };
 
 enum class UnaryOpType : int
@@ -38,11 +33,6 @@ struct UnaryOp : public Expression
 
     UnaryOp(UnaryOpType opType, Expression* expr) : Expression(SyntaxType::UnaryOp), opType(opType), expr(expr)
     {
-    }
-
-    void Accept(ASTVisitor* visitor) override
-    {
-        visitor->VisitUnaryOp(this); 
     }
 };
 
@@ -78,11 +68,6 @@ struct BinaryOp : public Expression
     BinaryOp(BinaryOpType opType, Expression* lvalue, Expression* rvalue) : Expression(SyntaxType::BinaryOp), opType(opType), lvalue(lvalue), rvalue(rvalue)
     {
     }
-
-    void Accept(ASTVisitor* visitor) override
-    {
-        visitor->VisitBinaryOp(this);
-    }
 };
 
 struct VariableRef : public Expression
@@ -91,11 +76,6 @@ struct VariableRef : public Expression
 
     VariableRef(const std::string& name) : Expression(SyntaxType::VariableRef), name(name)
     {
-    }
-
-    void Accept(ASTVisitor* visitor) override
-    {
-        visitor->VisitVariableRef(this); 
     }
 };
 
@@ -106,10 +86,5 @@ struct Assignment : public Expression
 
     Assignment(const std::string& lvalue, Expression* rvalue) : Expression(SyntaxType::Assignment), lvalue(lvalue), rvalue(rvalue)
     {
-    }
-
-    void Accept(ASTVisitor* visitor) override
-    {
-        visitor->VisitAssignment(this);
     }
 };

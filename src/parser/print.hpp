@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <ostream>
 
 #include "syntax/as.hpp"
 #include "syntax/program.hpp"
@@ -8,143 +9,199 @@
 #include "syntax/expr.hpp"
 #include "syntax/assignment_op.hpp"
 
-class ASTPrinter : public ASTVisitor
+namespace
+{
+    template<typename T>
+    T* down_cast(AbstractSyntax* ptr)
+    {
+        return dynamic_cast<T*>(ptr); 
+    }
+};
+
+class ASTPrinter
 {
     public:
-        void VisitProgram(Program* program) override
+        ASTPrinter(std::ostream& outputstream) : m_OutputStream(outputstream)
         {
-            std::cout << "Program(" << std::endl;
-            SetIndent(m_Indent + 1); 
-            VisitFunction(program->function);
-            SetIndent(m_Indent - 1);
-            std::cout << ")" << std::endl;
         }
 
-        void VisitFunction(Function* function) override
+        void PrintSyntax(AbstractSyntax* syntax)
         {
-            std::cout << m_Spaces << function->name << "(" << std::endl;
+            switch (syntax->type())
+            {
+                case SyntaxType::Program: 
+                    PrintProgram(down_cast<Program>(syntax));
+                    break;
+                case SyntaxType::Function:
+                    PrintFunction(down_cast<Function>(syntax));
+                    break;
+                case SyntaxType::StatementExpression:
+                    PrintStatementExpression(down_cast<StatementExpression>(syntax));
+                    break;
+                case SyntaxType::AssignmentOp:
+                    PrintAssignmentOp(down_cast<AssignmentOp>(syntax));
+                    break;
+                case SyntaxType::Declaration:
+                    PrintDeclaration(down_cast<Declaration>(syntax));
+                    break;
+                case SyntaxType::Return:
+                    PrintReturn(down_cast<Return>(syntax));
+                    break;
+                case SyntaxType::IntConstant:
+                    PrintIntConstant(down_cast<IntConstant>(syntax));
+                    break;
+                case SyntaxType::UnaryOp:
+                    PrintUnaryOp(down_cast<UnaryOp>(syntax));
+                    break;
+                case SyntaxType::BinaryOp:
+                    PrintBinaryOp(down_cast<BinaryOp>(syntax));
+                    break;
+                case SyntaxType::VariableRef:
+                    PrintVariableRef(down_cast<VariableRef>(syntax));
+                    break;
+                case SyntaxType::Assignment:
+                    PrintAssignment(down_cast<Assignment>(syntax));
+                    break;
+            }
+        }
+
+    private:
+        std::ostream& m_OutputStream;
+
+        void PrintProgram(Program* program)
+        {
+            m_OutputStream << "Program(" << std::endl;
+            SetIndent(m_Indent + 1); 
+            PrintFunction(program->function);
+            SetIndent(m_Indent - 1);
+            m_OutputStream << ")" << std::endl;
+        }
+
+        void PrintFunction(Function* function)
+        {
+            m_OutputStream << m_Spaces << function->name << "(" << std::endl;
             SetIndent(m_Indent + 1); 
             for (auto statement : function->statements)
-                statement->Accept(this);
+                PrintSyntax(statement);
             SetIndent(m_Indent - 1); 
-            std::cout << m_Spaces << ")" << std::endl;
+            m_OutputStream << m_Spaces << ")" << std::endl;
         }
 
-        void VisitStatementExpression(StatementExpression* statementExpr) override
+        void PrintStatementExpression(StatementExpression* statementExpr)
         {
             if (statementExpr->expr)
             {
-                std::cout << m_Spaces;
-                statementExpr->expr->Accept(this);
-                std::cout << ";\n";
+                m_OutputStream << m_Spaces;
+                PrintSyntax(statementExpr->expr);
+                m_OutputStream << ";\n";
             } 
-            else std::cout << m_Spaces << "NULL STATEMENT;" << std::endl;
+            else m_OutputStream << m_Spaces << "NULL STATEMENT;" << std::endl;
         }
 
-        void VisitAssignmentOp(AssignmentOp* op) override
+        void PrintAssignmentOp(AssignmentOp* op)
         {
-            std::cout << op->lvalue << " "; 
+            m_OutputStream << op->lvalue << " "; 
             switch (op->OpType())
             {
-                case AssignmentOpType::Add: std::cout << "+="; break; 
-                case AssignmentOpType::Minus: std::cout << "-="; break;
-                case AssignmentOpType::Multiplication: std::cout << "*="; break;
-                case AssignmentOpType::Division: std::cout << "/="; break; 
-                case AssignmentOpType::Modulo: std::cout << "%="; break; 
-                case AssignmentOpType::LeftShift: std::cout << "<<="; break;
-                case AssignmentOpType::RightShift: std::cout << ">>="; break;
-                case AssignmentOpType::LogicalOr: std::cout << "|="; break;
-                case AssignmentOpType::LogicalAnd: std::cout << "&="; break;
-                case AssignmentOpType::LogicalXOR: std::cout << "^="; break; 
+                case AssignmentOpType::Add:            m_OutputStream << "+="; break; 
+                case AssignmentOpType::Minus:          m_OutputStream << "-="; break;
+                case AssignmentOpType::Multiplication: m_OutputStream << "*="; break;
+                case AssignmentOpType::Division:       m_OutputStream << "/="; break; 
+                case AssignmentOpType::Modulo:         m_OutputStream << "%="; break; 
+                case AssignmentOpType::LeftShift:      m_OutputStream << "<<="; break;
+                case AssignmentOpType::RightShift:     m_OutputStream << ">>="; break;
+                case AssignmentOpType::LogicalOr:      m_OutputStream << "|="; break;
+                case AssignmentOpType::LogicalAnd:     m_OutputStream << "&="; break;
+                case AssignmentOpType::LogicalXOR:     m_OutputStream << "^="; break; 
             }
-            std::cout << " ";
-            op->rvalue->Accept(this); 
+            m_OutputStream << " ";
+            PrintSyntax(op->rvalue);
         }
 
-        void VisitDeclaration(Declaration* decl) override
+        void PrintDeclaration(Declaration* decl)
         {
             size_t num_vars = decl->variables.size(); 
-            std::cout << m_Spaces << "int "; 
+            m_OutputStream << m_Spaces << "int "; 
             for (size_t i = 0; i < num_vars; i++)
             {
                 auto var = decl->variables[i]; 
-                std::cout << var.name; 
+                m_OutputStream << var.name; 
                 if (var.expr)
                 {
-                    std::cout << " = ";
-                    var.expr->Accept(this);
+                    m_OutputStream << " = ";
+                    PrintSyntax(var.expr);
                 }
-                if (i != num_vars - 1) std::cout << ", ";
+                if (i != num_vars - 1) m_OutputStream << ", ";
             }
-            std::cout << ";\n"; 
+            m_OutputStream << ";\n"; 
         }
 
-        void VisitReturn(Return* ret) override
+        void PrintReturn(Return* ret)
         {
-            std::cout << m_Spaces << "Return(" << std::endl;
+            m_OutputStream << m_Spaces << "Return(" << std::endl;
             SetIndent(m_Indent + 1);  
-            std::cout << m_Spaces; 
-            ret->expr->Accept(this); 
-            std::cout << "\n";
+            m_OutputStream << m_Spaces; 
+            PrintSyntax(ret->expr);
+            m_OutputStream << "\n";
             SetIndent(m_Indent - 1); 
-            std::cout << m_Spaces << ");" << std::endl;
+            m_OutputStream << m_Spaces << ");" << std::endl;
         }
 
-        void VisitIntConstant(IntConstant* constant) override
+        void PrintIntConstant(IntConstant* constant)
         {
-            std::cout << "IntConstant(" << constant->value << ")";
+            m_OutputStream << "IntConstant(" << constant->value << ")";
         }
 
-        void VisitUnaryOp(UnaryOp* op) override
+        void PrintUnaryOp(UnaryOp* op)
         {
             switch (op->opType)
             {
-                case UnaryOpType::Negation: std::cout << "-"; break;
-                case UnaryOpType::Complement: std::cout << "~"; break;
-                case UnaryOpType::LogicalNegation: std::cout << "!"; break;
+                case UnaryOpType::Negation:        m_OutputStream << "-"; break;
+                case UnaryOpType::Complement:      m_OutputStream << "~"; break;
+                case UnaryOpType::LogicalNegation: m_OutputStream << "!"; break;
             }
-            op->expr->Accept(this);
+            PrintSyntax(op->expr);
         }
 
-        void VisitBinaryOp(BinaryOp* op) override
+        void PrintBinaryOp(BinaryOp* op)
         {
-            std::cout << "(";
-            op->lvalue->Accept(this); 
+            m_OutputStream << "(";
+            PrintSyntax(op->lvalue);
             switch (op->opType)
             {
-                case BinaryOpType::Addition: std::cout << "+"; break;
-                case BinaryOpType::Subtraction: std::cout << "-"; break;
-                case BinaryOpType::Multiplication: std::cout << "*"; break;
-                case BinaryOpType::Division: std::cout << "/"; break;
-                case BinaryOpType::LogicalOr: std::cout << "||"; break;
-                case BinaryOpType::LogicalAnd: std::cout << "&&"; break;
-                case BinaryOpType::Equal: std::cout << "=="; break;
-                case BinaryOpType::NotEqual: std::cout << "!="; break;
-                case BinaryOpType::LessThan: std::cout << "<"; break;
-                case BinaryOpType::LessThanOrEqual: std::cout << "<="; break;
-                case BinaryOpType::GreaterThan: std::cout << ">"; break;
-                case BinaryOpType::GreaterThanOrEqual: std::cout << ">="; break;
-                case BinaryOpType::Remainder: std::cout << "%"; break; 
-                case BinaryOpType::BitwiseOr: std::cout << "|"; break;
-                case BinaryOpType::BitwiseAnd: std::cout << "&"; break;
-                case BinaryOpType::BitwiseXOR: std::cout << "^"; break;
-                case BinaryOpType::BitwiseLeftShift: std::cout << "<<"; break;
-                case BinaryOpType::BitwiseRightShift: std::cout << ">>"; break; 
-                case BinaryOpType::Comma: std::cout << ","; break;
+                case BinaryOpType::Addition:           m_OutputStream << "+"; break;
+                case BinaryOpType::Subtraction:        m_OutputStream << "-"; break;
+                case BinaryOpType::Multiplication:     m_OutputStream << "*"; break;
+                case BinaryOpType::Division:           m_OutputStream << "/"; break;
+                case BinaryOpType::LogicalOr:          m_OutputStream << "||"; break;
+                case BinaryOpType::LogicalAnd:         m_OutputStream << "&&"; break;
+                case BinaryOpType::Equal:              m_OutputStream << "=="; break;
+                case BinaryOpType::NotEqual:           m_OutputStream << "!="; break;
+                case BinaryOpType::LessThan:           m_OutputStream << "<"; break;
+                case BinaryOpType::LessThanOrEqual:    m_OutputStream << "<="; break;
+                case BinaryOpType::GreaterThan:        m_OutputStream << ">"; break;
+                case BinaryOpType::GreaterThanOrEqual: m_OutputStream << ">="; break;
+                case BinaryOpType::Remainder:          m_OutputStream << "%"; break; 
+                case BinaryOpType::BitwiseOr:          m_OutputStream << "|"; break;
+                case BinaryOpType::BitwiseAnd:         m_OutputStream << "&"; break;
+                case BinaryOpType::BitwiseXOR:         m_OutputStream << "^"; break;
+                case BinaryOpType::BitwiseLeftShift:   m_OutputStream << "<<"; break;
+                case BinaryOpType::BitwiseRightShift:  m_OutputStream << ">>"; break; 
+                case BinaryOpType::Comma:              m_OutputStream << ","; break;
             }
-            op->rvalue->Accept(this);
-            std::cout << ")";
+            PrintSyntax(op->rvalue);
+            m_OutputStream << ")";
         }
 
-        void VisitVariableRef(VariableRef* ref) override
+        void PrintVariableRef(VariableRef* ref)
         {
-            std::cout << ref->name; 
+            m_OutputStream << ref->name; 
         }
 
-        void VisitAssignment(Assignment* assignment) override
+        void PrintAssignment(Assignment* assignment)
         {
-            std::cout << assignment->lvalue << " = ";
-            assignment->rvalue->Accept(this);
+            m_OutputStream << assignment->lvalue << " = ";
+            PrintSyntax(assignment->rvalue);
         }
 
     private:
@@ -159,14 +216,11 @@ class ASTPrinter : public ASTVisitor
         }
 };
 
-static void pretty_print_ast(AbstractSyntax* ast)
+static void PrettyPrintAST(AbstractSyntax* ast)
 {
     if (ast != nullptr)
     {
-        ASTPrinter printer{}; 
-        ast->Accept(&printer); 
-    } else 
-    {
-        std::cout << "The abstract syntax tree is null!" << std::endl; 
-    }
+        ASTPrinter printer(std::cout); 
+        printer.PrintSyntax(ast); 
+    } else std::cout << "The abstract syntax tree is null!" << std::endl; 
 }

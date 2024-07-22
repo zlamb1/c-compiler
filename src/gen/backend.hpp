@@ -6,7 +6,6 @@
 #include "gen/asm.hpp"
 #include "gen/code_gen.hpp"
 #include "gen/def.hpp"
-#include "parser/syntax/visitor.hpp"
 
 class CompilerBackend
 {

@@ -21,11 +21,6 @@ struct StatementExpression : public Statement
     }
 
     Expression* expr; 
-
-    void Accept(ASTVisitor* visitor) override
-    {
-        visitor->VisitStatementExpression(this); 
-    }
 };
 
 struct Variable
@@ -50,11 +45,6 @@ struct Declaration : public Statement
     {
         variables.emplace_back(var); 
     }
-
-    void Accept(ASTVisitor* visitor) override
-    {
-        visitor->VisitDeclaration(this); 
-    }
 };
 
 struct Return : public Statement
@@ -63,10 +53,5 @@ struct Return : public Statement
 
     Return(Expression* expr) : Statement(SyntaxType::Return), expr(expr)
     {
-    }
-
-    void Accept(ASTVisitor* visitor) override
-    {
-        visitor->VisitReturn(this); 
     }
 };

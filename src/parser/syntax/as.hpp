@@ -1,6 +1,6 @@
 #pragma once
 
-#include "visitor.hpp"
+#include <memory>
 
 enum class SyntaxType : int
 {
@@ -33,7 +33,13 @@ public:
         return _type; 
     }
 
-    virtual void Accept(ASTVisitor* visitor) = 0;
+    typedef std::shared_ptr<AbstractSyntax> Ref; 
 private:
     SyntaxType _type; 
 };
+
+template<typename T, typename ... Args>
+constexpr std::shared_ptr<T> CreateRef(Args&& ... args)
+{
+	return std::make_shared<T>(std::forward<Args>(args)...);
+}
