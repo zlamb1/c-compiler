@@ -37,7 +37,7 @@ void Compiler::CompileProgram()
             return;
         }
         // constant folding
-        FoldConstants(ast);
+        OptimizeTree(ast);
         // print tree
         m_Parser->PrintTree(ast); 
         // generate x86-64
