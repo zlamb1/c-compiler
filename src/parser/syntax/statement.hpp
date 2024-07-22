@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "as.hpp"
 #include "expr.hpp"
 
@@ -26,17 +28,27 @@ struct StatementExpression : public Statement
     }
 };
 
+struct Variable
+{
+    std::string name; 
+    Expression* expr; 
+
+    Variable(const std::string& name, Expression* expr) : name(name), expr(expr)
+    {
+    }
+};
+
 struct Declaration : public Statement
 {
-    std::string name;
-    Expression* expr;
+    std::vector<Variable> variables; 
 
-    Declaration(const std::string& name) : Statement(SyntaxType::Declaration), name(name), expr(nullptr)
+    Declaration() : Statement(SyntaxType::Declaration)
     {
     }
 
-    Declaration(const std::string& name, Expression* expr) : Statement(SyntaxType::Declaration), name(name), expr(expr)
+    Declaration(Variable var) : Statement(SyntaxType::Declaration)
     {
+        variables.emplace_back(var); 
     }
 
     void Accept(ASTVisitor* visitor) override

@@ -6,6 +6,7 @@
 #include "syntax/program.hpp"
 #include "syntax/function.hpp"
 #include "syntax/expr.hpp"
+#include "syntax/assignment_op.hpp"
 
 class ASTPrinter : public ASTVisitor
 {
@@ -40,15 +41,42 @@ class ASTPrinter : public ASTVisitor
             else std::cout << m_Spaces << "NULL STATEMENT;" << std::endl;
         }
 
+        void VisitAssignmentOp(AssignmentOp* op) override
+        {
+            std::cout << op->lvalue << " "; 
+            switch (op->OpType())
+            {
+                case AssignmentOpType::Add: std::cout << "+="; break; 
+                case AssignmentOpType::Minus: std::cout << "-="; break;
+                case AssignmentOpType::Multiplication: std::cout << "*="; break;
+                case AssignmentOpType::Division: std::cout << "/="; break; 
+                case AssignmentOpType::Modulo: std::cout << "%="; break; 
+                case AssignmentOpType::LeftShift: std::cout << "<<="; break;
+                case AssignmentOpType::RightShift: std::cout << ">>="; break;
+                case AssignmentOpType::LogicalOr: std::cout << "|="; break;
+                case AssignmentOpType::LogicalAnd: std::cout << "&="; break;
+                case AssignmentOpType::LogicalXOR: std::cout << "^="; break; 
+            }
+            std::cout << " ";
+            op->rvalue->Accept(this); 
+        }
+
         void VisitDeclaration(Declaration* decl) override
         {
-            if (decl->expr)
+            size_t num_vars = decl->variables.size(); 
+            std::cout << m_Spaces << "int "; 
+            for (size_t i = 0; i < num_vars; i++)
             {
-                std::cout << m_Spaces << decl->name << " = ";
-                decl->expr->Accept(this); 
-                std::cout << ";\n";
+                auto var = decl->variables[i]; 
+                std::cout << var.name; 
+                if (var.expr)
+                {
+                    std::cout << " = ";
+                    var.expr->Accept(this);
+                }
+                if (i != num_vars - 1) std::cout << ", ";
             }
-            else std::cout << m_Spaces << decl->name << ";" << std::endl;
+            std::cout << ";\n"; 
         }
 
         void VisitReturn(Return* ret) override
@@ -102,6 +130,7 @@ class ASTPrinter : public ASTVisitor
                 case BinaryOpType::BitwiseXOR: std::cout << "^"; break;
                 case BinaryOpType::BitwiseLeftShift: std::cout << "<<"; break;
                 case BinaryOpType::BitwiseRightShift: std::cout << ">>"; break; 
+                case BinaryOpType::Comma: std::cout << ","; break;
             }
             op->rvalue->Accept(this);
             std::cout << ")";

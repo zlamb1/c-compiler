@@ -11,10 +11,12 @@
 class BlockContext
 {
 public:
-    int CreateVariable(const std::string& variableName)
+    int CreateVariable(const std::string& variableName, int offset)
     {
-        m_VariableMap[variableName] = ++m_StackIndex; 
-        return m_StackIndex * m_WordSize; 
+        auto index = m_StackIndex;
+        m_VariableMap[variableName] = index;
+        m_StackIndex -= offset;  
+        return index;
     }
 
     bool HasVariable(const std::string& variableName)
@@ -28,14 +30,15 @@ public:
         {
             // TODO: handle 
         }
-        return m_VariableMap[variableName] * m_WordSize; 
+        return m_VariableMap[variableName]; 
     }
+
+    int& StackOffset() { return m_StackIndex; }
 
 private:
     // variable name : stack index
     std::unordered_map<std::string, int> m_VariableMap; 
     int m_StackIndex = 0;
-    int m_WordSize = -4; 
 };
 
 class ASMGenerator
@@ -57,6 +60,9 @@ class ASMGenerator
                     break; 
                 case SyntaxType::StatementExpression:
                     GenerateStatementExpression(dynamic_cast<StatementExpression*>(syntax));
+                    break;
+                case SyntaxType::AssignmentOp:
+                    GenerateAssignmentOp(dynamic_cast<AssignmentOp*>(syntax));
                     break;
                 case SyntaxType::Declaration:
                     GenerateDeclaration(dynamic_cast<Declaration*>(syntax));
@@ -90,11 +96,13 @@ class ASMGenerator
         void GenerateFunction(Function* function)
         {
             m_ContextStack.push(BlockContext()); 
+            auto& context = m_ContextStack.top(); 
             m_CodeGenerator.EmitFun(function->name); 
             m_CodeGenerator.IncreaseIndentation(); 
             // generate function prologue
             m_CodeGenerator.EmitOp("push", RegisterArg("rbp"));
-            m_CodeGenerator.EmitOp("mov", RegisterArg("rsp"), RegisterArg("rbp"));
+            m_CodeGenerator.EmitOp("movq", RegisterArg("rsp"), RegisterArg("rbp"));
+            context.StackOffset() -= 8; 
             // generate function body
             if (function->statements.size() == 0)
                 GenerateSyntax(new Return(new IntConstant(0))); 
@@ -116,7 +124,6 @@ class ASMGenerator
             }
             m_CodeGenerator.DecreaseIndentation();
         }
-        
 
         void GenerateStatementExpression(StatementExpression* statementExpr)
         {
@@ -124,17 +131,67 @@ class ASMGenerator
                 GenerateSyntax(statementExpr->expr); 
         }
 
+        void GenerateAssignmentOp(AssignmentOp* op)
+        {
+            auto& context = m_ContextStack.top(); 
+            if (!context.HasVariable(op->lvalue))
+                throw UndeclaredException(op->lvalue);
+            auto offset = context.GetStackOffset(op->lvalue); 
+            m_CodeGenerator.EmitOp("movl", OffsetArg("rbp", offset), RegisterArg("eax"));
+            SetDestination("ecx"); 
+            GenerateSyntax(op->rvalue); 
+            ResetDestination(); 
+            switch (op->OpType())
+            {
+                case AssignmentOpType::Add:
+                    m_CodeGenerator.EmitOp("addl", RegisterArg("ecx"), RegisterArg("eax")); 
+                    break;
+                case AssignmentOpType::Minus:
+                    m_CodeGenerator.EmitOp("subl", RegisterArg("ecx"), RegisterArg("eax")); 
+                    break; 
+                case AssignmentOpType::Multiplication:
+                    m_CodeGenerator.EmitOp("imul", RegisterArg("ecx"), RegisterArg("eax")); 
+                    break;
+                case AssignmentOpType::Division:
+                    m_CodeGenerator.EmitOp("cdq"); 
+                    m_CodeGenerator.EmitOp("idiv", RegisterArg("ecx"));
+                    break;
+                case AssignmentOpType::Modulo:
+                    m_CodeGenerator.EmitOp("cdq");
+                    m_CodeGenerator.EmitOp("idiv", RegisterArg("ecx")); 
+                    m_CodeGenerator.EmitOp("movl", RegisterArg("edx"), RegisterArg("eax")); 
+                    break;
+                case AssignmentOpType::LeftShift:
+                    m_CodeGenerator.EmitOp("sal", RegisterArg("ecx"), RegisterArg("eax"));
+                    break;
+                case AssignmentOpType::RightShift:
+                    m_CodeGenerator.EmitOp("sar", RegisterArg("ecx"), RegisterArg("eax")); 
+                    break;
+                case AssignmentOpType::LogicalOr:
+                    m_CodeGenerator.EmitOp("or", RegisterArg("ecx"), RegisterArg("eax")); 
+                    break;
+                case AssignmentOpType::LogicalAnd:
+                    m_CodeGenerator.EmitOp("and", RegisterArg("ecx"), RegisterArg("eax")); 
+                    break;
+                case AssignmentOpType::LogicalXOR:
+                    m_CodeGenerator.EmitOp("xor", RegisterArg("ecx"), RegisterArg("eax")); 
+                    break; 
+            }
+            m_CodeGenerator.EmitOp("movl", RegisterArg("eax"), OffsetArg("rbp", offset));
+        }
+
         void GenerateDeclaration(Declaration* decl)
         {
             auto& context = m_ContextStack.top(); 
-            if (context.HasVariable(decl->name))
-                throw RedeclaredException(decl->name); 
-            auto displacement = context.CreateVariable(decl->name); 
-            if (decl->expr)
+            for (auto var : decl->variables)
             {
-                GenerateSyntax(decl->expr); 
-            } else m_CodeGenerator.EmitOp("movl", ImmediateArg(0), RegisterArg("eax"));
-            m_CodeGenerator.EmitOp("movl", RegisterArg("eax"), DisplacementArg("rbp", displacement)); 
+                if (context.HasVariable(var.name))
+                    throw RedeclaredException(var.name);
+                auto offset = context.CreateVariable(var.name, 4); 
+                if (var.expr != nullptr) GenerateSyntax(var.expr); 
+                else m_CodeGenerator.EmitOp("movl", ImmediateArg(0), RegisterArg("eax")); 
+                m_CodeGenerator.EmitOp("movl", RegisterArg("eax"), OffsetArg("rbp", offset)); 
+            }
         }
 
         void GenerateReturn(Return* ret)
@@ -142,14 +199,14 @@ class ASMGenerator
             if (ret->expr)
                 GenerateSyntax(ret->expr); 
             // generate function epilogue
-            m_CodeGenerator.EmitOp("mov", RegisterArg("rbp"), RegisterArg("rsp")); 
-            m_CodeGenerator.EmitOp("pop", RegisterArg("rbp"));
+            m_CodeGenerator.EmitOp("movq", RegisterArg("rbp"), RegisterArg("rsp")); 
+            m_CodeGenerator.EmitOp("popq", RegisterArg("rbp"));
             m_CodeGenerator.EmitOp("ret");
         }
 
         void GenerateIntConstant(IntConstant* expr)
         {
-            m_CodeGenerator.EmitOp("mov", ImmediateArg(expr->value), RegisterArg(m_DestinationRegister)); 
+            m_CodeGenerator.EmitOp("movl", ImmediateArg(expr->value), RegisterArg(m_DestinationRegister)); 
         }
 
         void GenerateUnaryOp(UnaryOp* op)
@@ -287,6 +344,11 @@ class ASMGenerator
                     LoadRegisters(op->rvalue, op->lvalue); 
                     m_CodeGenerator.EmitOp("sar", RegisterArg("ecx"), RegisterArg("eax"));
                     break;
+                case BinaryOpType::Comma:
+                    // evaluate both operands
+                    GenerateSyntax(op->lvalue);
+                    GenerateSyntax(op->rvalue); 
+                    break;
             }
         }
 
@@ -295,8 +357,8 @@ class ASMGenerator
             auto& context = m_ContextStack.top();
             if (!context.HasVariable(ref->name))
                 throw UndeclaredException(ref->name); 
-            int displacement = context.GetStackOffset(ref->name); 
-            m_CodeGenerator.EmitOp("movl", DisplacementArg("rbp", displacement), RegisterArg(m_DestinationRegister)); 
+            auto offset = context.GetStackOffset(ref->name); 
+            m_CodeGenerator.EmitOp("movl", OffsetArg("rbp", offset), RegisterArg(m_DestinationRegister)); 
         }
 
         void GenerateAssignment(Assignment* assignment)
@@ -305,8 +367,8 @@ class ASMGenerator
             if (!context.HasVariable(assignment->lvalue))
                 throw UndeclaredException(assignment->lvalue);
             GenerateSyntax(assignment->rvalue); 
-            int displacement = context.GetStackOffset(assignment->lvalue);
-            m_CodeGenerator.EmitOp("movl", RegisterArg("eax"), DisplacementArg("rbp", displacement)); 
+            auto offset = context.GetStackOffset(assignment->lvalue);
+            m_CodeGenerator.EmitOp("movl", RegisterArg("eax"), OffsetArg("rbp", offset)); 
         }
 
     private: 

@@ -3,6 +3,7 @@
 struct Program;
 struct Function; 
 struct StatementExpression;
+struct AssignmentOp; 
 struct Declaration; 
 struct Return; 
 struct IntConstant; 
@@ -17,6 +18,7 @@ public:
     virtual void VisitProgram(Program* program) = 0;
     virtual void VisitFunction(Function* function) = 0;
     virtual void VisitStatementExpression(StatementExpression* statementExpr) = 0;
+    virtual void VisitAssignmentOp(AssignmentOp* op) = 0; 
     virtual void VisitDeclaration(Declaration* decl) = 0; 
     virtual void VisitReturn(Return* ret) = 0;
     virtual void VisitIntConstant(IntConstant* expr) = 0;

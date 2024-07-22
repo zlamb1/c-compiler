@@ -10,6 +10,7 @@
 #include "syntax/function.hpp"
 #include "syntax/program.hpp"
 #include "syntax/expr.hpp"
+#include "syntax/assignment_op.hpp"
 
 class ParseException : public std::exception
 {

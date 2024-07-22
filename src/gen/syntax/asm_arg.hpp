@@ -5,7 +5,7 @@
 enum class ArgType : int
 {
     Register,
-    Displacement,
+    Offset,
     Immediate,
     Label
 };
@@ -42,18 +42,18 @@ struct RegisterArg : public AssemblyArg
     }
 };
 
-struct DisplacementArg : public AssemblyArg
+struct OffsetArg : public AssemblyArg
 {
-    DisplacementArg(const std::string& _register, int displacement) : AssemblyArg(ArgType::Displacement), _register(_register), displacement(displacement)
+    OffsetArg(const std::string& _register, int offset) : AssemblyArg(ArgType::Offset), _register(_register), offset(offset)
     {
     }
 
     std::string _register; 
-    int displacement;
+    int offset;
 
     void Accept(SyntaxVisitor* syntaxVisitor)
     {
-        syntaxVisitor->VisitDisplacementArg(this); 
+        syntaxVisitor->VisitOffsetArg(this); 
     }
 };
 

@@ -8,6 +8,7 @@ enum class SyntaxType : int
     Function,
     // Statements
     StatementExpression,
+    AssignmentOp,
     Declaration,
     Return,
     // Expressions

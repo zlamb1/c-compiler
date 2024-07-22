@@ -47,56 +47,110 @@ Token Lexer::LexToken(StackString& str)
                 continue;
             }
 
+            if (str.hasCapacity(3))
+            {
+                auto charSequence = str.peek(3); 
+                if (charSequence == "<<=")
+                {
+                    str.pop(3);
+                    return Token(TokenKind::LeftShiftEquals); 
+                } else if (charSequence == ">>=")
+                {
+                    str.pop(3);
+                    return Token(TokenKind::RightShiftEquals); 
+                }
+            }
+
             if (str.hasCapacity(2))
             {
-                auto nextTwoCharacters = str.peek(2); 
-                if (nextTwoCharacters == "0x")
+                auto charSequence = str.peek(2); 
+                if (charSequence == "0x")
                 {
                     token.kind = TokenKind::HexConstant;
                     token.value += str.pop(2);
                     continue;
-                } else if (nextTwoCharacters == "//")
+                } else if (charSequence == "//")
                 {
                     str.pop(2); 
                     token.kind = TokenKind::Comment; 
                     continue;
-                } else if (nextTwoCharacters == "/*")
+                } else if (charSequence == "/*")
                 {
                     str.pop(2); 
                     token.kind = TokenKind::MultilineComment; 
                     continue; 
-                } else if (nextTwoCharacters == "&&")
+                } else if (charSequence == "&&")
                 {
                     str.pop(2); 
                     return Token(TokenKind::DoubleAmpersand);
-                } else if (nextTwoCharacters == "||")
+                } else if (charSequence == "||")
                 {
                     str.pop(2); 
                     return Token(TokenKind::DoublePipe); 
-                } else if (nextTwoCharacters == "==")
+                } else if (charSequence == "==")
                 {
                     str.pop(2);
                     return Token(TokenKind::DoubleEquals); 
-                } else if (nextTwoCharacters == "!=")
+                } else if (charSequence == "!=")
                 {
                     str.pop(2);
                     return Token(TokenKind::NotEqual); 
-                } else if (nextTwoCharacters == "<=")
+                } else if (charSequence == "<=")
                 {
                     str.pop(2);
                     return Token(TokenKind::LessThanOrEqual);
-                } else if (nextTwoCharacters == ">=")
+                } else if (charSequence == ">=")
                 {
                     str.pop(2); 
                     return Token(TokenKind::GreaterThanOrEqual); 
-                } else if (nextTwoCharacters == "<<")
+                } else if (charSequence == "<<")
                 {
                     str.pop(2);
                     return Token(TokenKind::LeftShift);
-                } else if (nextTwoCharacters == ">>")
+                } else if (charSequence == ">>")
                 {
                     str.pop(2);
                     return Token(TokenKind::RightShift); 
+                } else if (charSequence == "+=")
+                {
+                    str.pop(2);
+                    return Token(TokenKind::AddEquals);
+                } else if (charSequence == "-=")
+                {
+                    str.pop(2);
+                    return Token(TokenKind::MinusEquals);
+                } else if (charSequence == "*=")
+                {
+                    str.pop(2);
+                    return Token(TokenKind::AsteriskEquals);
+                } else if (charSequence == "/=")
+                {
+                    str.pop(2);
+                    return Token(TokenKind::SlashEquals);
+                } else if (charSequence == "%=")
+                {
+                    str.pop(2);
+                    return Token(TokenKind::PercentEquals);
+                } else if (charSequence == "<<=")
+                {
+                    str.pop(2);
+                    return Token(TokenKind::LeftShiftEquals);
+                } else if (charSequence == ">>=")
+                {
+                    str.pop(2);
+                    return Token(TokenKind::RightShiftEquals);
+                } else if (charSequence == "|=")
+                {
+                    str.pop(2);
+                    return Token(TokenKind::OrEquals);
+                } else if (charSequence == "&=")
+                {
+                    str.pop(2); 
+                    return Token(TokenKind::AndEquals);
+                } else if (charSequence == "^=")
+                {
+                    str.pop(2);
+                    return Token(TokenKind::CaretEquals);
                 }
             }
 
@@ -162,6 +216,9 @@ Token Lexer::LexToken(StackString& str)
                 case '=':
                     token.kind = TokenKind::Equal;
                     break;
+                case ',':
+                    token.kind = TokenKind::Comma;
+                    break;
             }
 
             if (token.kind != TokenKind::None)
@@ -226,6 +283,7 @@ Token Lexer::LexToken(StackString& str)
                 case '>':
                 case '%':
                 case '^': 
+                case ',':
                     return token; 
             }
         }

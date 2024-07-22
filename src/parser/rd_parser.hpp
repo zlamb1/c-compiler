@@ -1,39 +1,12 @@
 #pragma once
 
 #include "int_conv.hpp"
+#include "maps.hpp"
 #include "parser.hpp"
 #include "print.hpp"
 
-static std::unordered_map<TokenKind, UnaryOpType> TOKEN_TO_UNARY_TYPE
-{
-    { TokenKind::Minus, UnaryOpType::Negation },
-    { TokenKind::Tilde, UnaryOpType::Complement },
-    { TokenKind::Exclamation, UnaryOpType::LogicalNegation }
-};
-
-static std::unordered_map<TokenKind, BinaryOpType> TOKEN_TO_BINARY_TYPE
-{
-    { TokenKind::Plus, BinaryOpType::Addition },
-    { TokenKind::Minus, BinaryOpType::Subtraction },
-    { TokenKind::Asterisk, BinaryOpType::Multiplication },
-    { TokenKind::Slash, BinaryOpType::Division },
-    { TokenKind::Pipe, BinaryOpType::BitwiseOr },
-    { TokenKind::DoublePipe, BinaryOpType::LogicalOr },
-    { TokenKind::Ampersand, BinaryOpType::BitwiseAnd },
-    { TokenKind::DoubleAmpersand, BinaryOpType::LogicalAnd },
-    { TokenKind::DoubleEquals, BinaryOpType::Equal },
-    { TokenKind::NotEqual, BinaryOpType::NotEqual },
-    { TokenKind::LessThan, BinaryOpType::LessThan },
-    { TokenKind::LessThanOrEqual, BinaryOpType::LessThanOrEqual },
-    { TokenKind::GreaterThan, BinaryOpType::GreaterThan },
-    { TokenKind::GreaterThanOrEqual, BinaryOpType::GreaterThanOrEqual },
-    { TokenKind::Percent, BinaryOpType::Remainder },
-    { TokenKind::Caret, BinaryOpType::BitwiseXOR },
-    { TokenKind::LeftShift, BinaryOpType::BitwiseLeftShift },
-    { TokenKind::RightShift, BinaryOpType::BitwiseRightShift }
-};
-
 // Recursive-Descent Parser
+
 class RDParser : public Parser
 {
     public:
@@ -109,18 +82,7 @@ class RDParser : public Parser
             {
                 ConsumeToken(); 
                 if (token->value == "return") statement = new Return(ParseExpression()); 
-                else if (token->value == "int")
-                {
-                    token = NextToken();
-                    if (token->kind != TokenKind::Identifier) ExceptParse("Expected Symbol Identifier");
-                    auto name = token->value; 
-                    token = PeekToken();
-                    if (token->kind == TokenKind::Equal)
-                    {
-                        ConsumeToken(); 
-                        statement = new Declaration(name, ParseExpression()); 
-                    } else statement = new Declaration(name); 
-                }
+                else if (token->value == "int") statement = ParseDeclaration(); 
             } else if (token->kind == TokenKind::Semicolon) statement = new StatementExpression(nullptr);  
             else statement = new StatementExpression(ParseExpression()); 
             token = NextToken(); 
@@ -128,7 +90,50 @@ class RDParser : public Parser
             return statement; 
         }
 
+        Declaration* ParseDeclaration()
+        {
+            auto decl = new Declaration(); 
+            decl->variables.emplace_back(ParseVariable()); 
+            auto token = PeekToken(); 
+            while (token->kind == TokenKind::Comma)
+            {
+                ConsumeToken();
+                decl->variables.emplace_back(ParseVariable()); 
+                token = PeekToken(); 
+            }
+            return decl;
+        }
+
+        Variable ParseVariable()
+        {
+            auto token = NextToken(); 
+            if (token->kind != TokenKind::Identifier) ExceptParse("Expected Symbol Identifier"); 
+            auto name = token->value; 
+            token = PeekToken(); 
+            if (token->kind == TokenKind::Equal)
+            {
+                ConsumeToken();
+                // the comma operator is not used for declarations unless wrapped in parenthesis
+                return Variable(name, ParseAssignmentExpression()); 
+            } else return Variable(name, nullptr); 
+        }
+
         Expression* ParseExpression()
+        {
+            auto expr = ParseAssignmentExpression(); 
+            auto token = PeekToken(); 
+            if (token->kind == TokenKind::None) ExceptParse("Incomplete Expression"); 
+            while (token->kind == TokenKind::Comma)
+            {
+                ConsumeToken(); 
+                auto nextExpr = ParseAssignmentExpression(); 
+                expr = new BinaryOp(BinaryOpType::Comma, expr, nextExpr); 
+                token = PeekToken();
+            }
+            return expr; 
+        }
+
+        Expression* ParseAssignmentExpression()
         {
             auto token = PeekToken(); 
             if (token->kind == TokenKind::Identifier)
@@ -138,6 +143,11 @@ class RDParser : public Parser
                 token = PeekToken(); 
                 if (token->kind != TokenKind::Equal)
                 {
+                    if (TOKEN_TO_ASSIGNMENT_OP_TYPE.find(token->kind) != TOKEN_TO_ASSIGNMENT_OP_TYPE.end())
+                    {
+                        ConsumeToken(); 
+                        return new AssignmentOp(TOKEN_TO_ASSIGNMENT_OP_TYPE[token->kind], lvalue, ParseExpression()); 
+                    }
                     RevertToken(); 
                     return ParseLogicalOrExpression(); 
                 }

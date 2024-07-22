@@ -70,22 +70,23 @@ class ASMCodeGenerator : public CodeGenerator
         {
             switch (arg.type())
             {
-                case ArgType::Register: return EvaluateArg(dynamic_cast<const RegisterArg&&>(arg));
-                case ArgType::Displacement: return EvaluateArg(dynamic_cast<const DisplacementArg&&>(arg));
+                case ArgType::Register:  return EvaluateArg(dynamic_cast<const RegisterArg&&>(arg));
+                case ArgType::Offset:    return EvaluateArg(dynamic_cast<const OffsetArg&&>(arg));
                 case ArgType::Immediate: return EvaluateArg(dynamic_cast<const ImmediateArg&&>(arg));
-                case ArgType::Label: return EvaluateArg(dynamic_cast<const LabelArg&&>(arg));
+                case ArgType::Label:     return EvaluateArg(dynamic_cast<const LabelArg&&>(arg));
             }
+            return std::string(); 
         }
 
-        std::string EvaluateArg(const AssemblyArg&& arg) { EvaluateArg(arg); }
+        std::string EvaluateArg(const AssemblyArg&& arg) { return EvaluateArg(arg); }
 
-        virtual std::string EvaluateArg(const RegisterArg& arg) = 0;
-        virtual std::string EvaluateArg(const DisplacementArg& arg) = 0; 
+        virtual std::string EvaluateArg(const RegisterArg& arg)  = 0;
+        virtual std::string EvaluateArg(const OffsetArg& arg)    = 0; 
         virtual std::string EvaluateArg(const ImmediateArg& arg) = 0;
-        virtual std::string EvaluateArg(const LabelArg& arg) = 0; 
+        virtual std::string EvaluateArg(const LabelArg& arg)     = 0; 
 
-        std::string EvaluateArg(const RegisterArg&& arg) { return EvaluateArg(arg); }
-        std::string EvaluateArg(const DisplacementArg&& arg) { return EvaluateArg(arg); }
+        std::string EvaluateArg(const RegisterArg&& arg)  { return EvaluateArg(arg); }
+        std::string EvaluateArg(const OffsetArg&& arg)    { return EvaluateArg(arg); }
         std::string EvaluateArg(const ImmediateArg&& arg) { return EvaluateArg(arg); }
-        std::string EvaluateArg(const LabelArg&& arg) { return EvaluateArg(arg); }
+        std::string EvaluateArg(const LabelArg&& arg)     { return EvaluateArg(arg); }
 };

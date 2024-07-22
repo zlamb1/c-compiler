@@ -65,7 +65,8 @@ enum class BinaryOpType
     BitwiseAnd,
     BitwiseXOR,
     BitwiseLeftShift,
-    BitwiseRightShift
+    BitwiseRightShift,
+    Comma
 };
 
 struct BinaryOp : public Expression
