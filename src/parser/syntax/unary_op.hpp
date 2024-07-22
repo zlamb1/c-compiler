@@ -9,14 +9,21 @@ enum class UnaryOpType : int
     LogicalNegation
 };
 
-struct UnaryOp : public Expression
+class UnaryOp : public Expression
 {
-    UnaryOpType opType; 
+public:
     Expression::Ref expr; 
 
     UnaryOp(UnaryOpType opType, Expression::Ref expr) : Expression(SyntaxType::UnaryOp), opType(opType), expr(expr)
     {
     }
 
+    UnaryOpType OpType()
+    {
+        return opType; 
+    }
+
     typedef std::shared_ptr<UnaryOp> Ref;
+private:
+    UnaryOpType opType; 
 };

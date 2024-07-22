@@ -154,7 +154,7 @@ class ASTPrinter
 
         void PrintUnaryOp(UnaryOp::Ref op)
         {
-            switch (op->opType)
+            switch (op->OpType())
             {
                 case UnaryOpType::Negation:        m_OutputStream << "-"; break;
                 case UnaryOpType::Complement:      m_OutputStream << "~"; break;
@@ -167,7 +167,7 @@ class ASTPrinter
         {
             m_OutputStream << "(";
             PrintSyntax(op->lvalue);
-            switch (op->opType)
+            switch (op->OpType())
             {
                 case BinaryOpType::Addition:           m_OutputStream << "+";  break;
                 case BinaryOpType::Subtraction:        m_OutputStream << "-";  break;

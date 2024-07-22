@@ -1,3 +1,5 @@
 build
 .vscode
 /write_a_c_compiler
+/examples/**
+!/examples/**.c

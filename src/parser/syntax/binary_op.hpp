@@ -25,9 +25,9 @@ enum class BinaryOpType
     Comma
 };
 
-struct BinaryOp : public Expression
+class BinaryOp : public Expression
 {
-    BinaryOpType opType; 
+public:
     Expression::Ref lvalue; 
     Expression::Ref rvalue; 
 
@@ -35,5 +35,12 @@ struct BinaryOp : public Expression
     {
     }
 
+    BinaryOpType OpType()
+    {
+        return opType; 
+    }
+
     typedef std::shared_ptr<BinaryOp> Ref;
+private:
+    BinaryOpType opType; 
 };

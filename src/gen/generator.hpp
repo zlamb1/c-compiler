@@ -212,7 +212,7 @@ class ASMGenerator
         void GenerateUnaryOp(UnaryOp::Ref op)
         {
             GenerateSyntax(op->expr); 
-            switch (op->opType)
+            switch (op->OpType())
             {
                 case UnaryOpType::Negation:
                     m_CodeGenerator.EmitOp("neg", RegisterArg("eax")); 
@@ -230,7 +230,7 @@ class ASMGenerator
 
         void GenerateBinaryOp(BinaryOp::Ref op)
         {
-            switch (op->opType)
+            switch (op->OpType())
             {
                 case BinaryOpType::Addition:
                     LoadRegisters(op->lvalue, op->rvalue); 

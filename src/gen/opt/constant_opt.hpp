@@ -44,7 +44,7 @@ namespace
                 case SyntaxType::BinaryOp:
                 {
                     auto op = AbstractSyntax::RefCast<BinaryOp>(expr); 
-                    if (op->opType == BinaryOpType::Comma)
+                    if (op->OpType() == BinaryOpType::Comma)
                         return get_value(op->rvalue); 
                     break;
                 }
@@ -118,7 +118,7 @@ namespace
                 auto constant = get_value(op->expr);
                 if (constant)
                 {
-                    switch (op->opType)
+                    switch (op->OpType())
                     {
                         case UnaryOpType::Negation: 
                             return CreateRef<IntConstant>(-constant.value());
@@ -136,7 +136,7 @@ namespace
                 op->lvalue = FoldConstants(op->lvalue); 
                 auto lconst = get_value(op->lvalue); 
                 // short-circuit logic
-                switch (op->opType)
+                switch (op->OpType())
                 {
                     case BinaryOpType::LogicalOr:
                         if (lconst && lconst.value())
@@ -153,7 +153,7 @@ namespace
                 {
                     auto lvalue = lconst.value();
                     auto rvalue = rconst.value(); 
-                    switch (op->opType)
+                    switch (op->OpType())
                     {
                         case BinaryOpType::Addition:
                             return CreateRef<IntConstant>(lvalue + rvalue);
@@ -193,9 +193,9 @@ namespace
                             return CreateRef<IntConstant>(lvalue >> rvalue);                             
                     }
                 } else if (lconst)
-                    return CreateRef<BinaryOp>(op->opType, CreateRef<IntConstant>(lconst.value()), op->rvalue); 
+                    return CreateRef<BinaryOp>(op->OpType(), CreateRef<IntConstant>(lconst.value()), op->rvalue); 
                 else if (rconst)
-                    return CreateRef<BinaryOp>(op->opType, op->lvalue, CreateRef<IntConstant>(rconst.value())); 
+                    return CreateRef<BinaryOp>(op->OpType(), op->lvalue, CreateRef<IntConstant>(rconst.value())); 
                 break; 
             }
             case SyntaxType::VariableRef:
