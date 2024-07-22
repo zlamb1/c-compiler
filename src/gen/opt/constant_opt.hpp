@@ -4,12 +4,26 @@
 
 namespace
 {
+    // take care that variables are popped from map when their value is no longer known
+    // i.e. a = foo();
     static std::unordered_map<std::string, int> variables;
 
     static bool is_constant(AbstractSyntax* syntax)
     {
         if (syntax == nullptr) return false;
         return syntax->type() == SyntaxType::IntConstant; 
+    }
+
+    static bool variable_exists(const std::string& var)
+    {
+        return variables.find(var) != variables.end(); 
+    }
+
+    static void remove_variable(const std::string& var)
+    {
+        auto iter = variables.find(var); 
+        if (iter != variables.end())
+            variables.erase(iter);
     }
 
     static std::optional<int> get_value(Expression* expr)
@@ -23,17 +37,24 @@ namespace
                 case SyntaxType::VariableRef:
                 {
                     auto var = dynamic_cast<VariableRef*>(expr);
-                    if (variables.find(var->name) != variables.end())
-                    {
+                    if (variable_exists(var->name));
                         return variables[var->name]; 
-                    }
                     break;
                 }
                 case SyntaxType::BinaryOp:
+                {
                     auto op = dynamic_cast<BinaryOp*>(expr); 
                     if (op->opType == BinaryOpType::Comma)
                         return get_value(op->rvalue); 
                     break;
+                }
+                case SyntaxType::Assignment:
+                {
+                    auto assign = dynamic_cast<Assignment*>(expr); 
+                    if (variable_exists(assign->lvalue));
+                        return variables[assign->lvalue]; 
+                    break;
+                }
             }
         }
         return std::nullopt; 
@@ -44,6 +65,52 @@ namespace
         if (expr == nullptr) return expr; 
         switch (expr->type())
         {
+            case SyntaxType::AssignmentOp:
+            {
+                auto op = dynamic_cast<AssignmentOp*>(expr); 
+                op->rvalue = FoldConstants(op->rvalue); 
+                auto rconst = get_value(op->rvalue); 
+                if (rconst)
+                {
+                    auto value = rconst.value(); 
+                    if (op->rvalue->type() == SyntaxType::VariableRef)
+                        op->rvalue = new IntConstant(value);
+                    switch (op->OpType())
+                    {
+                        case AssignmentOpType::Add:
+                            variables[op->lvalue] += value;
+                            break;
+                        case AssignmentOpType::Minus:
+                            variables[op->lvalue] -= value;
+                            break;
+                        case AssignmentOpType::Multiplication:
+                            variables[op->lvalue] *= value;
+                            break;
+                        case AssignmentOpType::Division:
+                            variables[op->lvalue] /= value;
+                            break;
+                        case AssignmentOpType::Modulo:
+                            variables[op->lvalue] %= value; 
+                            break;
+                        case AssignmentOpType::LeftShift:
+                            variables[op->lvalue] <<= value;
+                            break;
+                        case AssignmentOpType::RightShift:
+                            variables[op->lvalue] >>= value;
+                            break;
+                        case AssignmentOpType::LogicalOr:
+                            variables[op->lvalue] |= value;
+                            break;
+                        case AssignmentOpType::LogicalAnd:
+                            variables[op->lvalue] &= value;
+                            break;
+                        case AssignmentOpType::LogicalXOR:
+                            variables[op->lvalue] ^= value;
+                            break;
+                    }
+                } else remove_variable(op->lvalue); 
+                break;
+            }
             case SyntaxType::UnaryOp:
             {
                 auto op = dynamic_cast<UnaryOp*>(expr);
@@ -67,13 +134,25 @@ namespace
             {
                 auto op = dynamic_cast<BinaryOp*>(expr);
                 op->lvalue = FoldConstants(op->lvalue); 
-                op->rvalue = FoldConstants(op->rvalue); 
-                auto lconstant = get_value(op->lvalue); 
-                auto rconstant = get_value(op->rvalue);
-                if (lconstant && rconstant)
+                auto lconst = get_value(op->lvalue); 
+                // short-circuit logic
+                switch (op->opType)
                 {
-                    auto lvalue = lconstant.value();
-                    auto rvalue = rconstant.value(); 
+                    case BinaryOpType::LogicalOr:
+                        if (lconst && lconst.value())
+                            return new IntConstant(1); 
+                        break;
+                    case BinaryOpType::LogicalAnd:
+                        if (lconst && !lconst.value())
+                            return new IntConstant(0);
+                        break;
+                }
+                op->rvalue = FoldConstants(op->rvalue); 
+                auto rconst = get_value(op->rvalue);
+                if (lconst && rconst)
+                {
+                    auto lvalue = lconst.value();
+                    auto rvalue = rconst.value(); 
                     switch (op->opType)
                     {
                         case BinaryOpType::Addition:
@@ -113,11 +192,27 @@ namespace
                         case BinaryOpType::BitwiseRightShift:
                             return new IntConstant(lvalue >> rvalue);                             
                     }
-                } else if (lconstant)
-                    return new BinaryOp(op->opType, new IntConstant(lconstant.value()), op->rvalue); 
-                else if (rconstant)
-                    return new BinaryOp(op->opType, op->lvalue, new IntConstant(rconstant.value())); 
+                } else if (lconst)
+                    return new BinaryOp(op->opType, new IntConstant(lconst.value()), op->rvalue); 
+                else if (rconst)
+                    return new BinaryOp(op->opType, op->lvalue, new IntConstant(rconst.value())); 
                 break; 
+            }
+            case SyntaxType::VariableRef:
+            {
+                auto var = dynamic_cast<VariableRef*>(expr);
+                if (variable_exists(var->name))
+                    return new IntConstant(variables[var->name]);
+                break;
+            }
+            case SyntaxType::Assignment:
+            {
+                auto assign = dynamic_cast<Assignment*>(expr); 
+                assign->rvalue = FoldConstants(assign->rvalue); 
+                auto constant = get_value(assign->rvalue);
+                if (constant) variables[assign->lvalue] = constant.value(); 
+                else remove_variable(assign->lvalue); 
+                break;
             }
         }
         return expr; 
@@ -126,6 +221,7 @@ namespace
     // Evaluate unary/binary operations that can be reduced to constants in the abstract syntax tree.
     static AbstractSyntax* EvaluateSyntax(AbstractSyntax* syntax)
     {
+        if (syntax == nullptr) return nullptr; 
         switch (syntax->type())
         {
             case SyntaxType::Program:
@@ -157,7 +253,8 @@ namespace
                     {
                         var.expr = FoldConstants(var.expr); 
                         auto constant = get_value(var.expr);
-                        if (constant) variables[var.name] = constant.value(); 
+                        if (constant) 
+                            variables[var.name] = constant.value(); 
                     }
                 }
                 break;
@@ -169,7 +266,6 @@ namespace
                 break; 
             }
         }
-
         return syntax; 
     }
 };

@@ -249,18 +249,20 @@ Token Lexer::LexToken(StackString& str)
                 case TokenKind::Comment:
                     if (next_char == '\n')
                     {
+                        std::cout << "Comment: " << token.value << std::endl;
                         str.pop(); 
                         return token; 
-                    } else token.value += next_char; 
-                    break;
+                    } 
+                    token.value += str.pop(); 
+                    continue;
                 case TokenKind::MultilineComment:
                     if (str.hasCapacity(2) && str.peek(2) == "*/")
                     {
                         str.pop(2);
                         return token; 
                     }
-                    else token.value += next_char; 
-                    break; 
+                    token.value += str.pop(); 
+                    continue;
             }
 
             switch (next_char)

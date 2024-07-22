@@ -100,7 +100,7 @@ class ASMGenerator
             m_CodeGenerator.EmitFun(function->name); 
             m_CodeGenerator.IncreaseIndentation(); 
             // generate function prologue
-            m_CodeGenerator.EmitOp("push", RegisterArg("rbp"));
+            m_CodeGenerator.EmitOp("pushq", RegisterArg("rbp"));
             m_CodeGenerator.EmitOp("movq", RegisterArg("rsp"), RegisterArg("rbp"));
             context.StackOffset() -= 8; 
             // generate function body
