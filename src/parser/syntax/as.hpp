@@ -34,6 +34,11 @@ public:
     }
 
     typedef std::shared_ptr<AbstractSyntax> Ref; 
+    template<typename T>
+    static std::shared_ptr<T> RefCast(Ref ref)
+    {
+        return std::dynamic_pointer_cast<T>(ref); 
+    }
 private:
     SyntaxType _type; 
 };

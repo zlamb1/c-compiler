@@ -20,9 +20,9 @@ class AssignmentOp : public Expression
 {
 public:
     std::string lvalue; 
-    Expression* rvalue; 
+    Expression::Ref rvalue; 
 
-    AssignmentOp(AssignmentOpType opType, const std::string& lvalue, Expression* rvalue) : 
+    AssignmentOp(AssignmentOpType opType, const std::string& lvalue, Expression::Ref rvalue) : 
         Expression(SyntaxType::AssignmentOp), opType(opType), lvalue(lvalue), rvalue(rvalue)
     {
     }
@@ -31,6 +31,8 @@ public:
     {
         return opType; 
     }
+
+    typedef std::shared_ptr<AssignmentOp> Ref;
 private:
     AssignmentOpType opType; 
 };

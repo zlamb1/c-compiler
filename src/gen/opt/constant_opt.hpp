@@ -8,7 +8,7 @@ namespace
     // i.e. a = foo();
     static std::unordered_map<std::string, int> variables;
 
-    static bool is_constant(AbstractSyntax* syntax)
+    static bool is_constant(AbstractSyntax::Ref syntax)
     {
         if (syntax == nullptr) return false;
         return syntax->type() == SyntaxType::IntConstant; 
@@ -26,31 +26,31 @@ namespace
             variables.erase(iter);
     }
 
-    static std::optional<int> get_value(Expression* expr)
+    static std::optional<int> get_value(Expression::Ref expr)
     {
         if (expr != nullptr)
         {
             switch (expr->type())
             {
                 case SyntaxType::IntConstant:
-                    return dynamic_cast<IntConstant*>(expr)->value;
+                    return AbstractSyntax::RefCast<IntConstant>(expr)->value;
                 case SyntaxType::VariableRef:
                 {
-                    auto var = dynamic_cast<VariableRef*>(expr);
+                    auto var = AbstractSyntax::RefCast<VariableRef>(expr);
                     if (variable_exists(var->name));
                         return variables[var->name]; 
                     break;
                 }
                 case SyntaxType::BinaryOp:
                 {
-                    auto op = dynamic_cast<BinaryOp*>(expr); 
+                    auto op = AbstractSyntax::RefCast<BinaryOp>(expr); 
                     if (op->opType == BinaryOpType::Comma)
                         return get_value(op->rvalue); 
                     break;
                 }
                 case SyntaxType::Assignment:
                 {
-                    auto assign = dynamic_cast<Assignment*>(expr); 
+                    auto assign = AbstractSyntax::RefCast<Assignment>(expr); 
                     if (variable_exists(assign->lvalue));
                         return variables[assign->lvalue]; 
                     break;
@@ -60,21 +60,21 @@ namespace
         return std::nullopt; 
     }
 
-    static Expression* FoldConstants(Expression* expr)
+    static Expression::Ref FoldConstants(Expression::Ref expr)
     {
         if (expr == nullptr) return expr; 
         switch (expr->type())
         {
             case SyntaxType::AssignmentOp:
             {
-                auto op = dynamic_cast<AssignmentOp*>(expr); 
+                auto op = AbstractSyntax::RefCast<AssignmentOp>(expr); 
                 op->rvalue = FoldConstants(op->rvalue); 
                 auto rconst = get_value(op->rvalue); 
                 if (rconst)
                 {
                     auto value = rconst.value(); 
                     if (op->rvalue->type() == SyntaxType::VariableRef)
-                        op->rvalue = new IntConstant(value);
+                        op->rvalue = CreateRef<IntConstant>(value);
                     switch (op->OpType())
                     {
                         case AssignmentOpType::Add:
@@ -113,7 +113,7 @@ namespace
             }
             case SyntaxType::UnaryOp:
             {
-                auto op = dynamic_cast<UnaryOp*>(expr);
+                auto op = AbstractSyntax::RefCast<UnaryOp>(expr);
                 op->expr = FoldConstants(op->expr); 
                 auto constant = get_value(op->expr);
                 if (constant)
@@ -121,18 +121,18 @@ namespace
                     switch (op->opType)
                     {
                         case UnaryOpType::Negation: 
-                            return new IntConstant(-constant.value());
+                            return CreateRef<IntConstant>(-constant.value());
                         case UnaryOpType::Complement:
-                            return new IntConstant(~constant.value()); 
+                            return CreateRef<IntConstant>(~constant.value()); 
                         case UnaryOpType::LogicalNegation:
-                            return new IntConstant(!constant.value());  
+                            return CreateRef<IntConstant>(!constant.value());  
                     }
                 }
                 break; 
             }
             case SyntaxType::BinaryOp:
             {
-                auto op = dynamic_cast<BinaryOp*>(expr);
+                auto op = AbstractSyntax::RefCast<BinaryOp>(expr);
                 op->lvalue = FoldConstants(op->lvalue); 
                 auto lconst = get_value(op->lvalue); 
                 // short-circuit logic
@@ -140,11 +140,11 @@ namespace
                 {
                     case BinaryOpType::LogicalOr:
                         if (lconst && lconst.value())
-                            return new IntConstant(1); 
+                            return CreateRef<IntConstant>(1); 
                         break;
                     case BinaryOpType::LogicalAnd:
                         if (lconst && !lconst.value())
-                            return new IntConstant(0);
+                            return CreateRef<IntConstant>(0);
                         break;
                 }
                 op->rvalue = FoldConstants(op->rvalue); 
@@ -156,58 +156,58 @@ namespace
                     switch (op->opType)
                     {
                         case BinaryOpType::Addition:
-                            return new IntConstant(lvalue + rvalue);
+                            return CreateRef<IntConstant>(lvalue + rvalue);
                         case BinaryOpType::Subtraction:
-                            return new IntConstant(lvalue - rvalue);
+                            return CreateRef<IntConstant>(lvalue - rvalue);
                         case BinaryOpType::Multiplication:
-                            return new IntConstant(lvalue * rvalue);
+                            return CreateRef<IntConstant>(lvalue * rvalue);
                         case BinaryOpType::Division:
-                            return new IntConstant(lvalue / rvalue);
+                            return CreateRef<IntConstant>(lvalue / rvalue);
                         case BinaryOpType::LogicalOr:
-                            return new IntConstant(lvalue || rvalue);
+                            return CreateRef<IntConstant>(lvalue || rvalue);
                         case BinaryOpType::LogicalAnd:
-                            return new IntConstant(lvalue && rvalue);
+                            return CreateRef<IntConstant>(lvalue && rvalue);
                         case BinaryOpType::Equal:
-                            return new IntConstant(lvalue == rvalue);
+                            return CreateRef<IntConstant>(lvalue == rvalue);
                         case BinaryOpType::NotEqual:
-                            return new IntConstant(lvalue != rvalue);
+                            return CreateRef<IntConstant>(lvalue != rvalue);
                         case BinaryOpType::Remainder:
-                            return new IntConstant(lvalue % rvalue); 
+                            return CreateRef<IntConstant>(lvalue % rvalue); 
                         case BinaryOpType::LessThan:
-                            return new IntConstant(lvalue < rvalue);
+                            return CreateRef<IntConstant>(lvalue < rvalue);
                         case BinaryOpType::LessThanOrEqual:
-                            return new IntConstant(lvalue <= rvalue);
+                            return CreateRef<IntConstant>(lvalue <= rvalue);
                         case BinaryOpType::GreaterThan:
-                            return new IntConstant(lvalue > rvalue);
+                            return CreateRef<IntConstant>(lvalue > rvalue);
                         case BinaryOpType::GreaterThanOrEqual:
-                            return new IntConstant(lvalue >= rvalue); 
+                            return CreateRef<IntConstant>(lvalue >= rvalue); 
                         case BinaryOpType::BitwiseOr:
-                            return new IntConstant(lvalue | rvalue);
+                            return CreateRef<IntConstant>(lvalue | rvalue);
                         case BinaryOpType::BitwiseAnd:
-                            return new IntConstant(lvalue & rvalue); 
+                            return CreateRef<IntConstant>(lvalue & rvalue); 
                         case BinaryOpType::BitwiseXOR:
-                            return new IntConstant(lvalue ^ rvalue); 
+                            return CreateRef<IntConstant>(lvalue ^ rvalue); 
                         case BinaryOpType::BitwiseLeftShift:
-                            return new IntConstant(lvalue << rvalue);
+                            return CreateRef<IntConstant>(lvalue << rvalue);
                         case BinaryOpType::BitwiseRightShift:
-                            return new IntConstant(lvalue >> rvalue);                             
+                            return CreateRef<IntConstant>(lvalue >> rvalue);                             
                     }
                 } else if (lconst)
-                    return new BinaryOp(op->opType, new IntConstant(lconst.value()), op->rvalue); 
+                    return CreateRef<BinaryOp>(op->opType, CreateRef<IntConstant>(lconst.value()), op->rvalue); 
                 else if (rconst)
-                    return new BinaryOp(op->opType, op->lvalue, new IntConstant(rconst.value())); 
+                    return CreateRef<BinaryOp>(op->opType, op->lvalue, CreateRef<IntConstant>(rconst.value())); 
                 break; 
             }
             case SyntaxType::VariableRef:
             {
-                auto var = dynamic_cast<VariableRef*>(expr);
+                auto var = AbstractSyntax::RefCast<VariableRef>(expr);
                 if (variable_exists(var->name))
-                    return new IntConstant(variables[var->name]);
+                    return CreateRef<IntConstant>(variables[var->name]);
                 break;
             }
             case SyntaxType::Assignment:
             {
-                auto assign = dynamic_cast<Assignment*>(expr); 
+                auto assign = AbstractSyntax::RefCast<Assignment>(expr); 
                 assign->rvalue = FoldConstants(assign->rvalue); 
                 auto constant = get_value(assign->rvalue);
                 if (constant) variables[assign->lvalue] = constant.value(); 
@@ -219,33 +219,33 @@ namespace
     }
 
     // Evaluate unary/binary operations that can be reduced to constants in the abstract syntax tree.
-    static AbstractSyntax* EvaluateSyntax(AbstractSyntax* syntax)
+    static AbstractSyntax::Ref EvaluateSyntax(AbstractSyntax::Ref syntax)
     {
         if (syntax == nullptr) return nullptr; 
         switch (syntax->type())
         {
             case SyntaxType::Program:
             {
-                auto program = dynamic_cast<Program*>(syntax);
+                auto program = AbstractSyntax::RefCast<Program>(syntax);
                 EvaluateSyntax(program->function); 
                 break; 
             }
             case SyntaxType::Function:
             {
-                auto function = dynamic_cast<Function*>(syntax); 
+                auto function = AbstractSyntax::RefCast<Function>(syntax); 
                 for (auto statement : function->statements)
                     EvaluateSyntax(statement); 
                 break; 
             }
             case SyntaxType::StatementExpression:
             {
-                auto statementExpr = dynamic_cast<StatementExpression*>(syntax);
+                auto statementExpr = AbstractSyntax::RefCast<StatementExpression>(syntax);
                 statementExpr->expr = FoldConstants(statementExpr->expr);
                 break;
             }
             case SyntaxType::Declaration:
             {
-                auto decl = dynamic_cast<Declaration*>(syntax);
+                auto decl = AbstractSyntax::RefCast<Declaration>(syntax);
                 for (auto var : decl->variables)
                 {
                     if (var.expr == nullptr) variables[var.name] = 0; 
@@ -261,7 +261,7 @@ namespace
             }
             case SyntaxType::Return:
             {
-                auto ret = dynamic_cast<Return*>(syntax); 
+                auto ret = AbstractSyntax::RefCast<Return>(syntax); 
                 ret->expr = FoldConstants(ret->expr);
                 break; 
             }
@@ -270,7 +270,7 @@ namespace
     }
 };
 
-static void OptimizeTree(AbstractSyntax* syntax)
+static void OptimizeTree(AbstractSyntax::Ref syntax)
 {
     variables.clear(); 
     EvaluateSyntax(syntax); 

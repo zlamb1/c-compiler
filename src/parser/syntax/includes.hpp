@@ -1,0 +1,16 @@
+#pragma once
+
+#include "as.hpp"
+#include "assignment.hpp"
+#include "assignment_op.hpp"
+#include "binary_op.hpp"
+#include "decl.hpp"
+#include "expr.hpp"
+#include "function.hpp"
+#include "int_constant.hpp"
+#include "program.hpp"
+#include "ret.hpp"
+#include "statement.hpp"
+#include "statement_expr.hpp"
+#include "unary_op.hpp"
+#include "variable_ref.hpp"

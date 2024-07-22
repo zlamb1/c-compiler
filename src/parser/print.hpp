@@ -12,9 +12,9 @@
 namespace
 {
     template<typename T>
-    T* down_cast(AbstractSyntax* ptr)
+    std::shared_ptr<T> down_cast(AbstractSyntax::Ref ptr)
     {
-        return dynamic_cast<T*>(ptr); 
+        return std::dynamic_pointer_cast<T>(ptr); 
     }
 };
 
@@ -25,7 +25,7 @@ class ASTPrinter
         {
         }
 
-        void PrintSyntax(AbstractSyntax* syntax)
+        void PrintSyntax(AbstractSyntax::Ref syntax)
         {
             switch (syntax->type())
             {
@@ -68,7 +68,7 @@ class ASTPrinter
     private:
         std::ostream& m_OutputStream;
 
-        void PrintProgram(Program* program)
+        void PrintProgram(Program::Ref program)
         {
             m_OutputStream << "Program(" << std::endl;
             SetIndent(m_Indent + 1); 
@@ -77,7 +77,7 @@ class ASTPrinter
             m_OutputStream << ")" << std::endl;
         }
 
-        void PrintFunction(Function* function)
+        void PrintFunction(Function::Ref function)
         {
             m_OutputStream << m_Spaces << function->name << "(" << std::endl;
             SetIndent(m_Indent + 1); 
@@ -87,7 +87,7 @@ class ASTPrinter
             m_OutputStream << m_Spaces << ")" << std::endl;
         }
 
-        void PrintStatementExpression(StatementExpression* statementExpr)
+        void PrintStatementExpression(StatementExpression::Ref statementExpr)
         {
             if (statementExpr->expr)
             {
@@ -98,7 +98,7 @@ class ASTPrinter
             else m_OutputStream << m_Spaces << "NULL STATEMENT;" << std::endl;
         }
 
-        void PrintAssignmentOp(AssignmentOp* op)
+        void PrintAssignmentOp(AssignmentOp::Ref op)
         {
             m_OutputStream << op->lvalue << " "; 
             switch (op->OpType())
@@ -118,7 +118,7 @@ class ASTPrinter
             PrintSyntax(op->rvalue);
         }
 
-        void PrintDeclaration(Declaration* decl)
+        void PrintDeclaration(Declaration::Ref decl)
         {
             size_t num_vars = decl->variables.size(); 
             m_OutputStream << m_Spaces << "int "; 
@@ -136,7 +136,7 @@ class ASTPrinter
             m_OutputStream << ";\n"; 
         }
 
-        void PrintReturn(Return* ret)
+        void PrintReturn(Return::Ref ret)
         {
             m_OutputStream << m_Spaces << "Return(" << std::endl;
             SetIndent(m_Indent + 1);  
@@ -147,12 +147,12 @@ class ASTPrinter
             m_OutputStream << m_Spaces << ");" << std::endl;
         }
 
-        void PrintIntConstant(IntConstant* constant)
+        void PrintIntConstant(IntConstant::Ref constant)
         {
             m_OutputStream << "IntConstant(" << constant->value << ")";
         }
 
-        void PrintUnaryOp(UnaryOp* op)
+        void PrintUnaryOp(UnaryOp::Ref op)
         {
             switch (op->opType)
             {
@@ -163,42 +163,42 @@ class ASTPrinter
             PrintSyntax(op->expr);
         }
 
-        void PrintBinaryOp(BinaryOp* op)
+        void PrintBinaryOp(BinaryOp::Ref op)
         {
             m_OutputStream << "(";
             PrintSyntax(op->lvalue);
             switch (op->opType)
             {
-                case BinaryOpType::Addition:           m_OutputStream << "+"; break;
-                case BinaryOpType::Subtraction:        m_OutputStream << "-"; break;
-                case BinaryOpType::Multiplication:     m_OutputStream << "*"; break;
-                case BinaryOpType::Division:           m_OutputStream << "/"; break;
+                case BinaryOpType::Addition:           m_OutputStream << "+";  break;
+                case BinaryOpType::Subtraction:        m_OutputStream << "-";  break;
+                case BinaryOpType::Multiplication:     m_OutputStream << "*";  break;
+                case BinaryOpType::Division:           m_OutputStream << "/";  break;
                 case BinaryOpType::LogicalOr:          m_OutputStream << "||"; break;
                 case BinaryOpType::LogicalAnd:         m_OutputStream << "&&"; break;
                 case BinaryOpType::Equal:              m_OutputStream << "=="; break;
                 case BinaryOpType::NotEqual:           m_OutputStream << "!="; break;
-                case BinaryOpType::LessThan:           m_OutputStream << "<"; break;
+                case BinaryOpType::LessThan:           m_OutputStream << "<";  break;
                 case BinaryOpType::LessThanOrEqual:    m_OutputStream << "<="; break;
-                case BinaryOpType::GreaterThan:        m_OutputStream << ">"; break;
+                case BinaryOpType::GreaterThan:        m_OutputStream << ">";  break;
                 case BinaryOpType::GreaterThanOrEqual: m_OutputStream << ">="; break;
-                case BinaryOpType::Remainder:          m_OutputStream << "%"; break; 
-                case BinaryOpType::BitwiseOr:          m_OutputStream << "|"; break;
-                case BinaryOpType::BitwiseAnd:         m_OutputStream << "&"; break;
-                case BinaryOpType::BitwiseXOR:         m_OutputStream << "^"; break;
+                case BinaryOpType::Remainder:          m_OutputStream << "%";  break; 
+                case BinaryOpType::BitwiseOr:          m_OutputStream << "|";  break;
+                case BinaryOpType::BitwiseAnd:         m_OutputStream << "&";  break;
+                case BinaryOpType::BitwiseXOR:         m_OutputStream << "^";  break;
                 case BinaryOpType::BitwiseLeftShift:   m_OutputStream << "<<"; break;
                 case BinaryOpType::BitwiseRightShift:  m_OutputStream << ">>"; break; 
-                case BinaryOpType::Comma:              m_OutputStream << ","; break;
+                case BinaryOpType::Comma:              m_OutputStream << ",";  break;
             }
             PrintSyntax(op->rvalue);
             m_OutputStream << ")";
         }
 
-        void PrintVariableRef(VariableRef* ref)
+        void PrintVariableRef(VariableRef::Ref ref)
         {
             m_OutputStream << ref->name; 
         }
 
-        void PrintAssignment(Assignment* assignment)
+        void PrintAssignment(Assignment::Ref assignment)
         {
             m_OutputStream << assignment->lvalue << " = ";
             PrintSyntax(assignment->rvalue);
@@ -216,7 +216,7 @@ class ASTPrinter
         }
 };
 
-static void PrettyPrintAST(AbstractSyntax* ast)
+static void PrettyPrintAST(AbstractSyntax::Ref ast)
 {
     if (ast != nullptr)
     {

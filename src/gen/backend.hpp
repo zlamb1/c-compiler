@@ -22,7 +22,7 @@ class CompilerBackend
             #endif
         }
 
-        void GenerateCode(CompilerFlags flags, AbstractSyntax* ast)
+        void GenerateCode(CompilerFlags flags, AbstractSyntax::Ref ast)
         {
             if (ast == nullptr) return; 
             auto outputpath = flags.outputpath + ".s"; 

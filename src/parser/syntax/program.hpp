@@ -4,9 +4,11 @@
 
 struct Program : public AbstractSyntax
 {
-    Function* function;
+    Function::Ref function;
 
-    Program(Function* function) : AbstractSyntax(SyntaxType::Program), function(function)
+    Program(Function::Ref function) : AbstractSyntax(SyntaxType::Program), function(function)
     {
     }
+
+    typedef std::shared_ptr<Program> Ref;
 };

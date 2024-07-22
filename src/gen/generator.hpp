@@ -48,52 +48,52 @@ class ASMGenerator
         {
         }
 
-        void GenerateSyntax(AbstractSyntax* syntax)
+        void GenerateSyntax(AbstractSyntax::Ref syntax)
         {
             switch (syntax->type())
             {
                 case SyntaxType::Program:
-                    GenerateProgram(dynamic_cast<Program*>(syntax)); 
+                    GenerateProgram(AbstractSyntax::RefCast<Program>(syntax)); 
                     break;
                 case SyntaxType::Function:
-                    GenerateFunction(dynamic_cast<Function*>(syntax));
+                    GenerateFunction(AbstractSyntax::RefCast<Function>(syntax));
                     break; 
                 case SyntaxType::StatementExpression:
-                    GenerateStatementExpression(dynamic_cast<StatementExpression*>(syntax));
+                    GenerateStatementExpression(AbstractSyntax::RefCast<StatementExpression>(syntax));
                     break;
                 case SyntaxType::AssignmentOp:
-                    GenerateAssignmentOp(dynamic_cast<AssignmentOp*>(syntax));
+                    GenerateAssignmentOp(AbstractSyntax::RefCast<AssignmentOp>(syntax));
                     break;
                 case SyntaxType::Declaration:
-                    GenerateDeclaration(dynamic_cast<Declaration*>(syntax));
+                    GenerateDeclaration(AbstractSyntax::RefCast<Declaration>(syntax));
                     break;
                 case SyntaxType::Return:
-                    GenerateReturn(dynamic_cast<Return*>(syntax)); 
+                    GenerateReturn(AbstractSyntax::RefCast<Return>(syntax)); 
                     break; 
                 case SyntaxType::IntConstant:
-                    GenerateIntConstant(dynamic_cast<IntConstant*>(syntax)); 
+                    GenerateIntConstant(AbstractSyntax::RefCast<IntConstant>(syntax)); 
                     break;
                 case SyntaxType::UnaryOp:
-                    GenerateUnaryOp(dynamic_cast<UnaryOp*>(syntax)); 
+                    GenerateUnaryOp(AbstractSyntax::RefCast<UnaryOp>(syntax)); 
                     break;
                 case SyntaxType::BinaryOp:
-                    GenerateBinaryOp(dynamic_cast<BinaryOp*>(syntax)); 
+                    GenerateBinaryOp(AbstractSyntax::RefCast<BinaryOp>(syntax)); 
                     break; 
                 case SyntaxType::VariableRef:
-                    GenerateVariableRef(dynamic_cast<VariableRef*>(syntax));
+                    GenerateVariableRef(AbstractSyntax::RefCast<VariableRef>(syntax));
                     break;
                 case SyntaxType::Assignment:
-                    GenerateAssignment(dynamic_cast<Assignment*>(syntax));
+                    GenerateAssignment(AbstractSyntax::RefCast<Assignment>(syntax));
                     break;
             }
         }
 
-        void GenerateProgram(Program* program)
+        void GenerateProgram(Program::Ref program)
         {
             GenerateFunction(program->function); 
         }
 
-        void GenerateFunction(Function* function)
+        void GenerateFunction(Function::Ref function)
         {
             m_ContextStack.push(BlockContext()); 
             auto& context = m_ContextStack.top(); 
@@ -105,7 +105,7 @@ class ASMGenerator
             context.StackOffset() -= 8; 
             // generate function body
             if (function->statements.size() == 0)
-                GenerateSyntax(new Return(new IntConstant(0))); 
+                GenerateSyntax(CreateRef<Return>(CreateRef<IntConstant>(0))); 
             bool foundReturn = false; 
             for (size_t i = 0; i < function->statements.size(); i++)
             {
@@ -120,18 +120,18 @@ class ASMGenerator
                 }
                 // generate return statement if one does not exist
                 if (i == function->statements.size() - 1 && !foundReturn)
-                    GenerateSyntax(new Return(new IntConstant(0))); 
+                    GenerateSyntax(CreateRef<Return>(CreateRef<IntConstant>(0))); 
             }
             m_CodeGenerator.DecreaseIndentation();
         }
 
-        void GenerateStatementExpression(StatementExpression* statementExpr)
+        void GenerateStatementExpression(StatementExpression::Ref statementExpr)
         {
             if (statementExpr->expr)
                 GenerateSyntax(statementExpr->expr); 
         }
 
-        void GenerateAssignmentOp(AssignmentOp* op)
+        void GenerateAssignmentOp(AssignmentOp::Ref op)
         {
             auto& context = m_ContextStack.top(); 
             if (!context.HasVariable(op->lvalue))
@@ -180,7 +180,7 @@ class ASMGenerator
             m_CodeGenerator.EmitOp("movl", RegisterArg("eax"), OffsetArg("rbp", offset));
         }
 
-        void GenerateDeclaration(Declaration* decl)
+        void GenerateDeclaration(Declaration::Ref decl)
         {
             auto& context = m_ContextStack.top(); 
             for (auto var : decl->variables)
@@ -194,7 +194,7 @@ class ASMGenerator
             }
         }
 
-        void GenerateReturn(Return* ret)
+        void GenerateReturn(Return::Ref ret)
         {
             if (ret->expr)
                 GenerateSyntax(ret->expr); 
@@ -204,12 +204,12 @@ class ASMGenerator
             m_CodeGenerator.EmitOp("ret");
         }
 
-        void GenerateIntConstant(IntConstant* expr)
+        void GenerateIntConstant(IntConstant::Ref expr)
         {
             m_CodeGenerator.EmitOp("movl", ImmediateArg(expr->value), RegisterArg(m_DestinationRegister)); 
         }
 
-        void GenerateUnaryOp(UnaryOp* op)
+        void GenerateUnaryOp(UnaryOp::Ref op)
         {
             GenerateSyntax(op->expr); 
             switch (op->opType)
@@ -228,7 +228,7 @@ class ASMGenerator
             }
         }
 
-        void GenerateBinaryOp(BinaryOp* op)
+        void GenerateBinaryOp(BinaryOp::Ref op)
         {
             switch (op->opType)
             {
@@ -352,7 +352,7 @@ class ASMGenerator
             }
         }
 
-        void GenerateVariableRef(VariableRef* ref)
+        void GenerateVariableRef(VariableRef::Ref ref)
         {
             auto& context = m_ContextStack.top();
             if (!context.HasVariable(ref->name))
@@ -361,7 +361,7 @@ class ASMGenerator
             m_CodeGenerator.EmitOp("movl", OffsetArg("rbp", offset), RegisterArg(m_DestinationRegister)); 
         }
 
-        void GenerateAssignment(Assignment* assignment)
+        void GenerateAssignment(Assignment::Ref assignment)
         {
             auto& context = m_ContextStack.top(); 
             if (!context.HasVariable(assignment->lvalue))
@@ -386,7 +386,7 @@ class ASMGenerator
             m_DestinationRegister = newDestination; 
         }
 
-        void LoadRegisters(Expression* lvalue, Expression* rvalue)
+        void LoadRegisters(Expression::Ref lvalue, Expression::Ref rvalue)
         {
             SetDestination("eax");
             GenerateSyntax(lvalue);

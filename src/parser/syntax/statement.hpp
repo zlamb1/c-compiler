@@ -12,46 +12,6 @@ struct Statement : public AbstractSyntax
     }
 
     virtual ~Statement() = default; 
-};
 
-struct StatementExpression : public Statement
-{
-    StatementExpression(Expression* expr) : Statement(SyntaxType::StatementExpression), expr(expr)
-    {
-    }
-
-    Expression* expr; 
-};
-
-struct Variable
-{
-    std::string name; 
-    Expression* expr; 
-
-    Variable(const std::string& name, Expression* expr) : name(name), expr(expr)
-    {
-    }
-};
-
-struct Declaration : public Statement
-{
-    std::vector<Variable> variables; 
-
-    Declaration() : Statement(SyntaxType::Declaration)
-    {
-    }
-
-    Declaration(Variable var) : Statement(SyntaxType::Declaration)
-    {
-        variables.emplace_back(var); 
-    }
-};
-
-struct Return : public Statement
-{
-    Expression* expr; 
-
-    Return(Expression* expr) : Statement(SyntaxType::Return), expr(expr)
-    {
-    }
+    typedef std::shared_ptr<Statement> Ref;
 };
