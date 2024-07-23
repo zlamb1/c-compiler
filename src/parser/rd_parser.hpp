@@ -55,21 +55,18 @@ class RDParser : public Parser
             if (token.kind != TokenKind::LeftParenthesis) ExceptParse("Malformed Function Definition"); 
             token = NextToken(); 
             if (token.kind != TokenKind::RightParenthesis) ExceptParse("Malformed Function Definition"); 
-            token = NextToken(); 
-            if (token.kind != TokenKind::LeftBrace) ExceptParse("Expected Block: expected '{'");
-            auto function = CreateRef<Function>(name); 
-            token = PeekToken();
-            bool foundReturn = false;
-            while (token.kind != TokenKind::RightBrace)
+            return CreateRef<Function>(name, ParseCompoundBlock());
+        }
+
+        // Statement | Declaration
+        Statement::Ref ParseBlockItem()
+        {
+            auto token = PeekToken(); 
+            if (token.kind == TokenKind::Keyword && token.value == "int")
             {
-                if (token.kind == TokenKind::None) ExceptParse("Unclosed Block: expected '}'");
-                auto statement = ParseStatement();
-                // discard statements encountered after return
-                if (!foundReturn) function->statements.emplace_back(statement); 
-                if (statement->type() == SyntaxType::Return) foundReturn = true; 
-                token = PeekToken(); 
-            }
-            return function;
+                ConsumeToken(); 
+                return ParseDeclaration(); 
+            } else return ParseStatement(); 
         }
 
         Statement::Ref ParseStatement()
@@ -80,8 +77,9 @@ class RDParser : public Parser
             {
                 ConsumeToken(); 
                 if (token.value == "return") statement = CreateRef<Return>(ParseExpression()); 
-                else if (token.value == "int") statement = ParseDeclaration(); 
-            } else if (token.kind == TokenKind::Semicolon) statement = CreateRef<StatementExpression>(nullptr);  
+                else if (token.value == "if") return ParseIfStatement(); 
+            } else if (token.kind == TokenKind::LeftBrace) return ParseCompoundBlock(); 
+            else if (token.kind == TokenKind::Semicolon) statement = CreateRef<StatementExpression>(nullptr);  
             else statement = CreateRef<StatementExpression>(ParseExpression()); 
             token = NextToken(); 
             if (token.kind != TokenKind::Semicolon) ExceptParse("Unclosed Statement: expected ';'");
@@ -99,6 +97,8 @@ class RDParser : public Parser
                 decl->variables.emplace_back(ParseVariable()); 
                 token = PeekToken(); 
             }
+            token = NextToken(); 
+            if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'");
             return decl;
         }
 
@@ -114,6 +114,54 @@ class RDParser : public Parser
                 // the comma operator is not used for declarations unless wrapped in parenthesis
                 return Variable(name, ParseAssignmentExpression()); 
             } else return Variable(name, nullptr); 
+        }
+
+        CompoundBlock::Ref ParseCompoundBlock()
+        {
+            auto token = NextToken();
+            if (token.kind != TokenKind::LeftBrace) ExceptParse("Expected Block: expected '{'");
+            auto block = CreateRef<CompoundBlock>(); 
+            token = PeekToken(); 
+            while (token.kind != TokenKind::RightBrace)
+            {
+                if (token.kind == TokenKind::None) ExceptParse("Unclosed Block: expected '}'");
+                block->statements.emplace_back(ParseBlockItem());
+                token = PeekToken(); 
+            }
+            ConsumeToken(); 
+            return block; 
+        }
+
+        Conditional ParseConditional()
+        {
+            auto token = NextToken();
+            if (token.kind != TokenKind::LeftParenthesis) ExceptParse("error: Expected '('");
+            auto condition = ParseExpression(); 
+            token = NextToken();
+            if (token.kind != TokenKind::RightParenthesis) ExceptParse("error: Expected ')'"); 
+            return Conditional(condition, ParseStatement()); 
+        }
+
+        IfStatement::Ref ParseIfStatement()
+        {
+            auto statement = CreateRef<IfStatement>(ParseConditional()); 
+            auto token = PeekToken(); 
+            while (token.kind == TokenKind::Keyword && token.value == "else")
+            {
+                ConsumeToken();
+                token = PeekToken();
+                if (token.kind == TokenKind::Keyword && token.value == "if")
+                {
+                    ConsumeToken(); 
+                    statement->else_ifs.emplace_back(ParseConditional()); 
+                } else
+                {
+                    statement->else_statement = ParseStatement();  
+                    break;
+                }
+                token = PeekToken(); 
+            }
+            return statement; 
         }
 
         Expression::Ref ParseExpression()

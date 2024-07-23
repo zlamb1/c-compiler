@@ -2,6 +2,8 @@
 
 #include <memory>
 
+#include "utility/ref.hpp"
+
 enum class SyntaxType : int
 {
     Program,
@@ -10,6 +12,8 @@ enum class SyntaxType : int
     StatementExpression,
     AssignmentOp,
     Declaration,
+    CompoundBlock,
+    IfStatement,
     Return,
     // Expressions
     UnaryOp,
@@ -42,9 +46,3 @@ public:
 private:
     SyntaxType _type; 
 };
-
-template<typename T, typename ... Args>
-constexpr std::shared_ptr<T> CreateRef(Args&& ... args)
-{
-	return std::make_shared<T>(std::forward<Args>(args)...);
-}

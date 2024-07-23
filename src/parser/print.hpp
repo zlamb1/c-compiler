@@ -44,6 +44,12 @@ class ASTPrinter
                 case SyntaxType::Declaration:
                     PrintDeclaration(down_cast<Declaration>(syntax));
                     break;
+                case SyntaxType::CompoundBlock:
+                    PrintCompoundBlock(down_cast<CompoundBlock>(syntax));
+                    break;
+                case SyntaxType::IfStatement:
+                    PrintIfStatement(down_cast<IfStatement>(syntax));
+                    break;
                 case SyntaxType::Return:
                     PrintReturn(down_cast<Return>(syntax));
                     break;
@@ -81,7 +87,7 @@ class ASTPrinter
         {
             m_OutputStream << m_Spaces << function->name << "(" << std::endl;
             SetIndent(m_Indent + 1); 
-            for (auto statement : function->statements)
+            for (auto statement : function->Statements())
                 PrintSyntax(statement);
             SetIndent(m_Indent - 1); 
             m_OutputStream << m_Spaces << ")" << std::endl;
@@ -136,15 +142,52 @@ class ASTPrinter
             m_OutputStream << ";\n"; 
         }
 
+        void PrintCompoundBlock(CompoundBlock::Ref compoundBlock)
+        {
+            m_OutputStream << m_Spaces << "{\n";
+            SetIndent(m_Indent + 1); 
+            if (compoundBlock->statements.empty()) 
+                m_OutputStream << m_Spaces << "EMPTY BLOCK\n";
+            for (auto statement : compoundBlock->statements)
+                PrintSyntax(statement); 
+            SetIndent(m_Indent - 1); 
+            m_OutputStream << m_Spaces << "}\n";
+        }
+
+        void PrintBlockItem(Statement::Ref statement)
+        {
+            if (statement->type() != SyntaxType::CompoundBlock)
+                std::cout << m_Spaces;
+            PrintSyntax(statement); 
+        }
+
+        void PrintIfStatement(IfStatement::Ref ifStatement)
+        {
+            m_OutputStream << m_Spaces << "IF (";
+            PrintSyntax(ifStatement->if_conditional.condition); 
+            m_OutputStream << ")\n";
+            PrintBlockItem(ifStatement->if_conditional.statement);
+            for (auto else_if : ifStatement->else_ifs)
+            {
+                m_OutputStream << m_Spaces << "ELSE IF (";
+                PrintSyntax(else_if.condition); 
+                m_OutputStream << ")\n"; 
+                PrintBlockItem(else_if.statement); 
+            }
+            if (ifStatement->else_statement != nullptr)
+            {
+                m_OutputStream << m_Spaces << "ELSE\n";
+                PrintBlockItem(ifStatement->else_statement); 
+            }
+        }
+
         void PrintReturn(Return::Ref ret)
         {
-            m_OutputStream << m_Spaces << "Return(" << std::endl;
+            m_OutputStream << m_Spaces << "Return(";
             SetIndent(m_Indent + 1);  
-            m_OutputStream << m_Spaces; 
             PrintSyntax(ret->expr);
-            m_OutputStream << "\n";
             SetIndent(m_Indent - 1); 
-            m_OutputStream << m_Spaces << ");" << std::endl;
+            m_OutputStream << ");\n";
         }
 
         void PrintIntConstant(IntConstant::Ref constant)

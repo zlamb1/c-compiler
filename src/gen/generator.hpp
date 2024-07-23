@@ -5,41 +5,9 @@
 #include <unordered_map>
 
 #include "asm/code_gen.hpp"
+#include "context.hpp"
 #include "exc.hpp"
 #include "parser/parser.hpp"
-
-class BlockContext
-{
-public:
-    int CreateVariable(const std::string& variableName, int offset)
-    {
-        auto index = m_StackIndex;
-        m_VariableMap[variableName] = index;
-        m_StackIndex -= offset;  
-        return index;
-    }
-
-    bool HasVariable(const std::string& variableName)
-    {
-        return m_VariableMap.find(variableName) != m_VariableMap.end(); 
-    }
-
-    int GetStackOffset(const std::string& variableName)
-    {
-        if (m_VariableMap.find(variableName) == m_VariableMap.end())
-        {
-            // TODO: handle 
-        }
-        return m_VariableMap[variableName]; 
-    }
-
-    int& StackOffset() { return m_StackIndex; }
-
-private:
-    // variable name : stack index
-    std::unordered_map<std::string, int> m_VariableMap; 
-    int m_StackIndex = 0;
-};
 
 class ASMGenerator
 {
@@ -67,6 +35,12 @@ class ASMGenerator
                 case SyntaxType::Declaration:
                     GenerateDeclaration(AbstractSyntax::RefCast<Declaration>(syntax));
                     break;
+                case SyntaxType::CompoundBlock:
+                    GenerateCompoundBlock(AbstractSyntax::RefCast<CompoundBlock>(syntax));
+                    break;
+                case SyntaxType::IfStatement:
+                    GenerateIfStatement(AbstractSyntax::RefCast<IfStatement>(syntax));
+                    break; 
                 case SyntaxType::Return:
                     GenerateReturn(AbstractSyntax::RefCast<Return>(syntax)); 
                     break; 
@@ -95,21 +69,21 @@ class ASMGenerator
 
         void GenerateFunction(Function::Ref function)
         {
-            m_ContextStack.push(BlockContext()); 
+            m_ContextStack.push(CreateRef<BlockContext>()); 
             auto& context = m_ContextStack.top(); 
             m_CodeGenerator.EmitFun(function->name); 
             m_CodeGenerator.IncreaseIndentation(); 
             // generate function prologue
             m_CodeGenerator.EmitOp("pushq", RegisterArg("rbp"));
             m_CodeGenerator.EmitOp("movq", RegisterArg("rsp"), RegisterArg("rbp"));
-            context.StackOffset() -= 8; 
+            context->StackOffset() -= 8; 
             // generate function body
-            if (function->statements.size() == 0)
+            if (function->Statements().size() == 0)
                 GenerateSyntax(CreateRef<Return>(CreateRef<IntConstant>(0))); 
             bool foundReturn = false; 
-            for (size_t i = 0; i < function->statements.size(); i++)
+            for (size_t i = 0; i < function->Statements().size(); i++)
             {
-                auto statement = function->statements[i]; 
+                auto statement = function->Statements()[i]; 
                 GenerateSyntax(statement);
                 if (statement->type() == SyntaxType::Return)
                 {
@@ -119,7 +93,7 @@ class ASMGenerator
                     } else foundReturn = true; 
                 }
                 // generate return statement if one does not exist
-                if (i == function->statements.size() - 1 && !foundReturn)
+                if (i == function->Statements().size() - 1 && !foundReturn)
                     GenerateSyntax(CreateRef<Return>(CreateRef<IntConstant>(0))); 
             }
             m_CodeGenerator.DecreaseIndentation();
@@ -134,9 +108,9 @@ class ASMGenerator
         void GenerateAssignmentOp(AssignmentOp::Ref op)
         {
             auto& context = m_ContextStack.top(); 
-            if (!context.HasVariable(op->lvalue))
+            if (!context->HasVariable(op->lvalue))
                 throw UndeclaredException(op->lvalue);
-            auto offset = context.GetStackOffset(op->lvalue); 
+            auto offset = context->GetVariableOffset(op->lvalue); 
             m_CodeGenerator.EmitOp("movl", OffsetArg("rbp", offset), RegisterArg("eax"));
             SetDestination("ecx"); 
             GenerateSyntax(op->rvalue); 
@@ -185,13 +159,59 @@ class ASMGenerator
             auto& context = m_ContextStack.top(); 
             for (auto var : decl->variables)
             {
-                if (context.HasVariable(var.name))
+                if (context->HasScopeVariable(var.name))
                     throw RedeclaredException(var.name);
-                auto offset = context.CreateVariable(var.name, 4); 
+                auto offset = context->CreateVariable(var.name, 4); 
                 if (var.expr != nullptr) GenerateSyntax(var.expr); 
                 else m_CodeGenerator.EmitOp("movl", ImmediateArg(0), RegisterArg("eax")); 
                 m_CodeGenerator.EmitOp("movl", RegisterArg("eax"), OffsetArg("rbp", offset)); 
             }
+        }
+
+        void GenerateCompoundBlock(CompoundBlock::Ref compoundBlock)
+        {
+            m_ContextStack.push(CreateRef<BlockContext>(m_ContextStack.top()));
+            for (auto statement : compoundBlock->statements)
+                GenerateSyntax(statement);
+            m_ContextStack.pop(); 
+        }
+
+        void GenerateIfStatement(IfStatement::Ref ifStatement)
+        {
+            bool has_else = ifStatement->else_statement != nullptr; 
+            auto end = m_CodeGenerator.GenerateLabel();
+            std::vector<LabelArg> labels;
+            for (auto else_if : ifStatement->else_ifs)
+                labels.emplace_back(m_CodeGenerator.GenerateLabel());
+            if (has_else)
+                labels.emplace_back(m_CodeGenerator.GenerateLabel()); 
+            GenerateSyntax(ifStatement->if_conditional.condition);
+            m_CodeGenerator.EmitOp("cmp", ImmediateArg(0), RegisterArg("eax")); 
+            m_CodeGenerator.EmitOp("je", labels.empty() ? end : labels[0]);
+            GenerateSyntax(ifStatement->if_conditional.statement);
+            if (!labels.empty())
+                m_CodeGenerator.EmitOp("jmp", end);
+            size_t len = ifStatement->else_ifs.size();
+            for (size_t i = 0; i < len; i++)
+            {
+                auto& else_if = ifStatement->else_ifs[i];
+                m_CodeGenerator.EmitLabel(labels[i]);
+                GenerateSyntax(else_if.condition);
+                bool last = labels.size() == len && i == len - 1;
+                if (!last)
+                {
+                    m_CodeGenerator.EmitOp("cmp", ImmediateArg(0), RegisterArg("eax")); 
+                    m_CodeGenerator.EmitOp("je", i < labels.size() - 1 ? labels[i + 1] : end);
+                }
+                GenerateSyntax(else_if.statement); 
+                if (!last) m_CodeGenerator.EmitOp("jmp", end);
+            }
+            if (has_else)    
+            {
+                m_CodeGenerator.EmitLabel(labels[labels.size() - 1]);       
+                GenerateSyntax(ifStatement->else_statement);
+            }
+            m_CodeGenerator.EmitLabel(end); 
         }
 
         void GenerateReturn(Return::Ref ret)
@@ -355,25 +375,25 @@ class ASMGenerator
         void GenerateVariableRef(VariableRef::Ref ref)
         {
             auto& context = m_ContextStack.top();
-            if (!context.HasVariable(ref->name))
+            if (!context->HasVariable(ref->name))
                 throw UndeclaredException(ref->name); 
-            auto offset = context.GetStackOffset(ref->name); 
+            auto offset = context->GetVariableOffset(ref->name); 
             m_CodeGenerator.EmitOp("movl", OffsetArg("rbp", offset), RegisterArg(m_DestinationRegister)); 
         }
 
         void GenerateAssignment(Assignment::Ref assignment)
         {
             auto& context = m_ContextStack.top(); 
-            if (!context.HasVariable(assignment->lvalue))
+            if (!context->HasVariable(assignment->lvalue))
                 throw UndeclaredException(assignment->lvalue);
             GenerateSyntax(assignment->rvalue); 
-            auto offset = context.GetStackOffset(assignment->lvalue);
+            auto offset = context->GetVariableOffset(assignment->lvalue);
             m_CodeGenerator.EmitOp("movl", RegisterArg("eax"), OffsetArg("rbp", offset)); 
         }
 
     private: 
         ASMCodeGenerator& m_CodeGenerator; 
-        std::stack<BlockContext> m_ContextStack;
+        std::stack<BlockContext::Ref> m_ContextStack;
         std::string m_DestinationRegister = "eax"; 
 
         void ResetDestination()

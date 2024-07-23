@@ -2,7 +2,7 @@
 
 static inline Token check_keyword(Token& token)
 {
-    if (token.value == "int" || token.value == "return")
+    if (token.value == "int" || token.value == "if" || token.value == "else" || token.value == "return")
         token.kind = TokenKind::Keyword; 
     return token; 
 }

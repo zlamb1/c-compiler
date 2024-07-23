@@ -233,7 +233,7 @@ namespace
             case SyntaxType::Function:
             {
                 auto function = AbstractSyntax::RefCast<Function>(syntax); 
-                for (auto statement : function->statements)
+                for (auto statement : function->Statements())
                     EvaluateSyntax(statement); 
                 break; 
             }
