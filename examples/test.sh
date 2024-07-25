@@ -29,7 +29,7 @@ absolute_dir=$(dirname "$(realpath $0)")
 failed=false
 
 # test valid examples
-for filename in "$absolute_dir/stage_$2/valid/"*.c; do
+for filename in `find $absolute_dir -type f -name "*.c" -path "$absolute_dir/stage_$2/valid/*" -not -path "*/valid_multifile/*" 2>/dev/null`; do
     [ -f "$filename" ] || break;
     no_ext=$(no_ext "$filename")
     formatted_filename=$(no_path "$no_ext")
@@ -54,7 +54,7 @@ for filename in "$absolute_dir/stage_$2/valid/"*.c; do
 done
 
 # test invalid examples
-for filename in "$absolute_dir/stage_$2/invalid/"*.c; do
+for filename in `find $absolute_dir -type f -name "*.c"  -path "$absolute_dir/stage_$2/invalid/*" -not -path "*/valid_multifile/*" 2>/dev/null`; do
     [ -f "$filename" ] || break;
     no_ext=$(no_ext "$filename")
     formatted_filename=$(no_path "$no_ext")
