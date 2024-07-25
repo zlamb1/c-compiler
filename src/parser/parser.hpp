@@ -43,14 +43,14 @@ class Parser
         const Token PeekToken()
         {
             if (m_Position >= m_Tokens.size())
-                return Token(TokenKind::None); 
+                return Token(TokenKind::None, 0, 0); 
             return m_Tokens[m_Position];
         }
 
         const Token NextToken()
         {
             if (m_Position >= m_Tokens.size())
-                return Token(TokenKind::None); 
+                return Token(TokenKind::None, 0, 0); 
             const auto& token = m_Tokens[m_Position];
             m_Position++;
             return token; 

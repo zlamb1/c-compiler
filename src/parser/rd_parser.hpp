@@ -34,9 +34,12 @@ class RDParser : public Parser
         }
 
     private:
-        void ExceptParse(const std::string& msg)
+        void ExceptParse(const std::string& msg, const Token& current_token)
         {
-            throw ParseException(msg); 
+            std::string prefix = std::to_string(current_token.line) + ":" + std::to_string(current_token.position) + ": ";
+            throw ParseException(
+                prefix + "Unexpected token: " + TOKEN_KIND_NAMES[current_token.kind] + "\n" + prefix + msg
+            ); 
         }
 
         Program::Ref ParseProgram()
@@ -47,14 +50,14 @@ class RDParser : public Parser
         Function::Ref ParseFunction()
         {
             auto token = NextToken();
-            if (token.kind != TokenKind::Keyword || token.value != "int") ExceptParse("error: Invalid return type"); 
+            if (token.kind != TokenKind::Keyword || token.value != "int") ExceptParse("error: Invalid return type", token); 
             token = NextToken(); 
-            if (token.kind != TokenKind::Identifier) ExceptParse("error: Excepted function identifier"); 
+            if (token.kind != TokenKind::Identifier) ExceptParse("error: Excepted function identifier", token); 
             std::string name = token.value; 
             token = NextToken(); 
-            if (token.kind != TokenKind::LeftParenthesis) ExceptParse("error: Expected '('"); 
+            if (token.kind != TokenKind::LeftParenthesis) ExceptParse("error: Expected '('", token); 
             token = NextToken(); 
-            if (token.kind != TokenKind::RightParenthesis) ExceptParse("error: Expected ')'"); 
+            if (token.kind != TokenKind::RightParenthesis) ExceptParse("error: Expected ')'", token); 
             return CreateRef<Function>(name, ParseCompoundBlock());
         }
 
@@ -82,7 +85,7 @@ class RDParser : public Parser
             else if (token.kind == TokenKind::Semicolon) statement = CreateRef<StatementExpression>(nullptr);  
             else statement = CreateRef<StatementExpression>(ParseExpression()); 
             token = NextToken(); 
-            if (token.kind != TokenKind::Semicolon) ExceptParse("error: expected ';'");
+            if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'", token);
             return statement; 
         }
 
@@ -100,14 +103,14 @@ class RDParser : public Parser
                 token = PeekToken(); 
             }
             token = NextToken(); 
-            if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'");
+            if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'", token);
             return decl;
         }
 
         Variable ParseVariable()
         {
             auto token = NextToken(); 
-            if (token.kind != TokenKind::Identifier) ExceptParse("error: Expected identifier"); 
+            if (token.kind != TokenKind::Identifier) ExceptParse("error: Expected identifier", token); 
             auto name = token.value; 
             token = PeekToken(); 
             if (token.kind == TokenKind::Equal)
@@ -121,12 +124,12 @@ class RDParser : public Parser
         CompoundBlock::Ref ParseCompoundBlock()
         {
             auto token = NextToken();
-            if (token.kind != TokenKind::LeftBrace) ExceptParse("error: expected '{'");
+            if (token.kind != TokenKind::LeftBrace) ExceptParse("error: expected '{'", token);
             auto block = CreateRef<CompoundBlock>(); 
             token = PeekToken(); 
             while (token.kind != TokenKind::RightBrace)
             {
-                if (token.kind == TokenKind::None) ExceptParse("error: expected '}'");
+                if (token.kind == TokenKind::None) ExceptParse("error: expected '}'", token);
                 block->statements.emplace_back(ParseBlockItem());
                 token = PeekToken(); 
             }
@@ -137,10 +140,10 @@ class RDParser : public Parser
         Conditional ParseConditional()
         {
             auto token = NextToken();
-            if (token.kind != TokenKind::LeftParenthesis) ExceptParse("error: Expected '('");
+            if (token.kind != TokenKind::LeftParenthesis) ExceptParse("error: Expected '('", token);
             auto condition = ParseExpression(); 
             token = NextToken();
-            if (token.kind != TokenKind::RightParenthesis) ExceptParse("error: Expected ')'"); 
+            if (token.kind != TokenKind::RightParenthesis) ExceptParse("error: Expected ')'", token); 
             return Conditional(condition, ParseStatement()); 
         }
 
@@ -170,7 +173,7 @@ class RDParser : public Parser
         {
             auto expr = ParseAssignmentExpression(); 
             auto token = PeekToken(); 
-            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression"); 
+            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression", token); 
             while (token.kind == TokenKind::Comma)
             {
                 ConsumeToken(); 
@@ -208,7 +211,7 @@ class RDParser : public Parser
         {
             auto expr = ParseLogicalAndExpression(); 
             auto token = PeekToken(); 
-            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression"); 
+            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression", token); 
             while (token.kind == TokenKind::DoublePipe)
             {
                 ConsumeToken(); 
@@ -224,7 +227,7 @@ class RDParser : public Parser
         {
             auto expr = ParseBitwiseOrExpression(); 
             auto token = PeekToken(); 
-            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression"); 
+            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression", token); 
             while (token.kind == TokenKind::DoubleAmpersand)
             {
                 ConsumeToken(); 
@@ -240,7 +243,7 @@ class RDParser : public Parser
         {
             auto expr = ParseBitwiseXORExpression(); 
             auto token = PeekToken(); 
-            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression"); 
+            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression", token); 
             while (token.kind == TokenKind::Pipe)
             {
                 ConsumeToken(); 
@@ -256,7 +259,7 @@ class RDParser : public Parser
         {
             auto expr = ParseBitwiseAndExpression(); 
             auto token = PeekToken(); 
-            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression"); 
+            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression", token); 
             while (token.kind == TokenKind::Caret)
             {
                 ConsumeToken(); 
@@ -272,7 +275,7 @@ class RDParser : public Parser
         {
             auto expr = ParseEqualityExpression(); 
             auto token = PeekToken(); 
-            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression"); 
+            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression", token); 
             while (token.kind == TokenKind::Ampersand)
             {
                 ConsumeToken(); 
@@ -288,7 +291,7 @@ class RDParser : public Parser
         {
             auto expr = ParseRelationalExpression(); 
             auto token = PeekToken(); 
-            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression"); 
+            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression", token); 
             while (token.kind == TokenKind::DoubleEquals || token.kind == TokenKind::NotEqual)
             {
                 ConsumeToken(); 
@@ -304,7 +307,7 @@ class RDParser : public Parser
         {
             auto expr = ParseShiftExpression(); 
             auto token = PeekToken(); 
-            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression"); 
+            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression", token); 
             while (token.kind == TokenKind::LessThan || token.kind == TokenKind::LessThanOrEqual ||
                    token.kind == TokenKind::GreaterThan || token.kind == TokenKind::GreaterThanOrEqual)
             {
@@ -321,7 +324,7 @@ class RDParser : public Parser
         {
             auto expr = ParseAdditiveExpression(); 
             auto token = PeekToken(); 
-            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression"); 
+            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression", token); 
             while (token.kind == TokenKind::LeftShift || token.kind == TokenKind::RightShift)
             {
                 ConsumeToken(); 
@@ -337,7 +340,7 @@ class RDParser : public Parser
         {
             auto term = ParseTerm(); 
             auto token = PeekToken(); 
-            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression"); 
+            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete expression", token); 
             while (token.kind == TokenKind::Plus || token.kind == TokenKind::Minus)
             {
                 ConsumeToken(); 
@@ -353,7 +356,7 @@ class RDParser : public Parser
         {
             auto factor = ParseFactor(); 
             auto token = PeekToken(); 
-            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete term"); 
+            if (token.kind == TokenKind::None) ExceptParse("error: Incomplete term", token); 
             while (token.kind == TokenKind::Asterisk || token.kind == TokenKind::Slash || token.kind == TokenKind::Percent)
             {
                 ConsumeToken(); 
@@ -372,7 +375,7 @@ class RDParser : public Parser
             {
                 auto expr = ParseExpression(); 
                 token = NextToken();
-                if (token.kind != TokenKind::RightParenthesis) ExceptParse("error: expected ')'"); 
+                if (token.kind != TokenKind::RightParenthesis) ExceptParse("error: expected ')'", token); 
                 return expr; 
             } else if (TOKEN_TO_UNARY_TYPE.find(token.kind) != TOKEN_TO_UNARY_TYPE.end())
             {
@@ -382,7 +385,7 @@ class RDParser : public Parser
                 return CreateRef<IntConstant>(parse_c_int(token.value)); 
             else if (token.kind == TokenKind::Identifier) 
                 return CreateRef<VariableRef>(token.value);
-            else ExceptParse("error: Unexpected token '" + TOKEN_KIND_NAMES[token.kind] + "'"); 
+            else ExceptParse("error: Unexpected token '" + TOKEN_KIND_NAMES[token.kind] + "'", token); 
             return nullptr; 
         }
 };

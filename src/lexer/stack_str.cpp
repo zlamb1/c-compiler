@@ -22,6 +22,12 @@ char StackString::pop()
     if (m_View.length() - m_Position < 1)
         throw PopException(); 
     char c = m_View[m_Position]; 
+    m_LinePosition++;
+    if (c == '\n') 
+    {
+        m_LinePosition = 1; 
+        m_Line++; 
+    }
     m_Position++; 
     return c; 
 }
@@ -31,6 +37,15 @@ std::string_view StackString::pop(size_t len)
     if (len < 1 || m_View.length() - m_Position < len)
         throw PopException(); 
     auto view = m_View.substr(m_Position, len);
+    m_LinePosition += len; 
+    for (char c : view)
+    {
+        if (c == '\n') 
+        {
+            m_LinePosition = 1; 
+            m_Line++; 
+        }
+    }
     m_Position += len; 
     return view; 
 }
@@ -49,14 +64,8 @@ std::string_view StackString::peek(size_t len) const
     return m_View.substr(m_Position, len); 
 }
 
-void StackString::reverse()
-{
-    if (m_Position <= 0)
-        throw ReverseException();
-    m_Position--; 
-}
-
 void StackString::reset()
 {
     m_Position = 0; 
+    m_Line = 1; 
 }

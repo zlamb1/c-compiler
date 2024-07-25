@@ -32,11 +32,12 @@ class StackString
         std::string_view pop(size_t len); 
         char peek() const;
         std::string_view peek(size_t len) const;  
-        void reverse(); 
-
         void reset();
+
+        const size_t& line_position() const { return m_LinePosition; }
+        const size_t& line() const { return m_Line; }
 
     private:
         std::string_view m_View; 
-        size_t m_Position = 0; 
+        size_t m_Position = 0, m_LinePosition = 1, m_Line = 1; 
 };

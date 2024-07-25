@@ -6,13 +6,15 @@
 
 struct Token
 {
-    Token(TokenKind kind) : kind{kind}, value{}
+    Token(TokenKind kind, size_t line, size_t position) : kind{kind}, value(), line(line), position(position)
     {
     }
-    Token(TokenKind kind, const std::string& value) : kind{kind}, value{value}
+    Token(TokenKind kind, const std::string& value, size_t line, size_t position) : kind(kind), value(value), line(line), position(position)
     {
     }
 
     TokenKind kind;
     std::string value{}; 
+    // metadata
+    size_t line, position; 
 };

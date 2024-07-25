@@ -20,6 +20,11 @@ class Lexer
         virtual const std::vector<Token>& LexFile(const std::string& filepath); 
         virtual Token LexToken(StackString& str); 
 
-    private:
+    protected:
         std::vector<Token> m_Tokens; 
+
+        inline static Token CreateToken(TokenKind kind, const StackString& str)
+        {
+            return Token(kind, str.line_position(), str.line()); 
+        }
 };

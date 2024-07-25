@@ -11,7 +11,6 @@ const std::vector<Token>& Lexer::LexFile(const std::string& filepath)
 {
     std::ifstream lexfile;
     lexfile.open(filepath);
-
     if (lexfile.is_open())
     {
         std::stringstream buffer;
@@ -19,31 +18,36 @@ const std::vector<Token>& Lexer::LexFile(const std::string& filepath)
         const std::string& file_content = buffer.str();
         std::string_view view{ file_content}; 
         StackString str{ view }; 
-
         while (str.hasCapacity())
         {
             auto token = LexToken(str); 
             if (token.kind != TokenKind::None && token.kind != TokenKind::Comment && token.kind != TokenKind::MultilineComment)
                 m_Tokens.emplace_back(token); 
         }
-
     } else std::cout << "Could not open lex file @ " << filepath << "!" << std::endl;
-
     return m_Tokens; 
 }
 
 Token Lexer::LexToken(StackString& str)
 {
-    Token token{ TokenKind::None };
+    Token token{ TokenKind::None, 0, 0 };
     while (str.hasCapacity())
     {
         char next_char = str.peek();
-
         if (token.kind == TokenKind::None)
         {
+            token.line = str.line(); 
+            token.position = str.line_position(); 
+
             if (is_nondigit(next_char))
             {
                 token.kind = TokenKind::Identifier;
+                continue;
+            }
+
+            if (is_digit(next_char))
+            {
+                token.kind = TokenKind::IntConstant;
                 continue;
             }
 
@@ -52,12 +56,14 @@ Token Lexer::LexToken(StackString& str)
                 auto charSequence = str.peek(3); 
                 if (charSequence == "<<=")
                 {
+                    auto token = CreateToken(TokenKind::LeftShiftEquals, str); 
                     str.pop(3);
-                    return Token(TokenKind::LeftShiftEquals); 
+                    return token; 
                 } else if (charSequence == ">>=")
                 {
+                    auto token = CreateToken(TokenKind::RightShiftEquals, str);
                     str.pop(3);
-                    return Token(TokenKind::RightShiftEquals); 
+                    return token;
                 }
             }
 
@@ -81,83 +87,95 @@ Token Lexer::LexToken(StackString& str)
                     continue; 
                 } else if (charSequence == "&&")
                 {
+                    auto token = CreateToken(TokenKind::DoubleAmpersand, str);
                     str.pop(2); 
-                    return Token(TokenKind::DoubleAmpersand);
+                    return token;
                 } else if (charSequence == "||")
                 {
+                    auto token = CreateToken(TokenKind::DoublePipe, str);
                     str.pop(2); 
-                    return Token(TokenKind::DoublePipe); 
+                    return token;
                 } else if (charSequence == "==")
                 {
+                    auto token = CreateToken(TokenKind::DoubleEquals, str);
                     str.pop(2);
-                    return Token(TokenKind::DoubleEquals); 
+                    return token;
                 } else if (charSequence == "!=")
                 {
+                    auto token = CreateToken(TokenKind::NotEqual, str);
                     str.pop(2);
-                    return Token(TokenKind::NotEqual); 
+                    return token;
                 } else if (charSequence == "<=")
                 {
+                    auto token = CreateToken(TokenKind::LessThanOrEqual, str);
                     str.pop(2);
-                    return Token(TokenKind::LessThanOrEqual);
+                    return token;
                 } else if (charSequence == ">=")
                 {
+                    auto token = CreateToken(TokenKind::GreaterThanOrEqual, str);
                     str.pop(2); 
-                    return Token(TokenKind::GreaterThanOrEqual); 
+                    return token;
                 } else if (charSequence == "<<")
                 {
+                    auto token = CreateToken(TokenKind::LeftShift, str);
                     str.pop(2);
-                    return Token(TokenKind::LeftShift);
+                    return token; 
                 } else if (charSequence == ">>")
                 {
+                    auto token = CreateToken(TokenKind::RightShift, str);
                     str.pop(2);
-                    return Token(TokenKind::RightShift); 
+                    return token; 
                 } else if (charSequence == "+=")
                 {
+                    auto token = CreateToken(TokenKind::AddEquals, str);
                     str.pop(2);
-                    return Token(TokenKind::AddEquals);
+                    return token;
                 } else if (charSequence == "-=")
                 {
+                    auto token = CreateToken(TokenKind::MinusEquals, str);
                     str.pop(2);
-                    return Token(TokenKind::MinusEquals);
+                    return token;
                 } else if (charSequence == "*=")
                 {
+                    auto token = CreateToken(TokenKind::AsteriskEquals, str);
                     str.pop(2);
-                    return Token(TokenKind::AsteriskEquals);
+                    return token;
                 } else if (charSequence == "/=")
                 {
+                    auto token = CreateToken(TokenKind::SlashEquals, str);
                     str.pop(2);
-                    return Token(TokenKind::SlashEquals);
+                    return token;
                 } else if (charSequence == "%=")
                 {
+                    auto token = CreateToken(TokenKind::PercentEquals, str);
                     str.pop(2);
-                    return Token(TokenKind::PercentEquals);
+                    return token;
                 } else if (charSequence == "<<=")
                 {
+                    auto token = CreateToken(TokenKind::LeftShiftEquals, str);
                     str.pop(2);
-                    return Token(TokenKind::LeftShiftEquals);
+                    return token;
                 } else if (charSequence == ">>=")
                 {
+                    auto token = CreateToken(TokenKind::RightShiftEquals, str);
                     str.pop(2);
-                    return Token(TokenKind::RightShiftEquals);
+                    return token;
                 } else if (charSequence == "|=")
                 {
+                    auto token = CreateToken(TokenKind::OrEquals, str);
                     str.pop(2);
-                    return Token(TokenKind::OrEquals);
+                    return token;
                 } else if (charSequence == "&=")
                 {
+                    auto token = CreateToken(TokenKind::AddEquals, str);
                     str.pop(2); 
-                    return Token(TokenKind::AndEquals);
+                    return token;
                 } else if (charSequence == "^=")
                 {
+                    auto token = CreateToken(TokenKind::CaretEquals, str);
                     str.pop(2);
-                    return Token(TokenKind::CaretEquals);
+                    return token;
                 }
-            }
-
-            if (is_digit(next_char))
-            {
-                token.kind = TokenKind::IntConstant;
-                continue;
             }
 
             switch (next_char)
