@@ -1,5 +1,7 @@
 build
 .vscode
-/write_a_c_compiler
-/examples/**
-!/examples/**.c
+write_a_c_compiler
+examples/stage_**/valid/*
+examples/stage_**/invalid/*
+!examples/stage_**/valid/**.c
+!examples/stage_**/invalid/**.c
