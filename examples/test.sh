@@ -33,7 +33,6 @@ for filename in `find $absolute_dir -type f -name "*.c" -path "$absolute_dir/sta
     [ -f "$filename" ] || break;
     no_ext=$(no_ext "$filename")
     formatted_filename=$(no_path "$no_ext")
-    echo "Testing $formatted_filename"
     # run gcc
     exit_code=$(run_correct "$filename")
     rm a.out >/dev/null 2>&1
@@ -48,8 +47,6 @@ for filename in `find $absolute_dir -type f -name "*.c" -path "$absolute_dir/sta
         echo "Compiler output: $compiler_output"
         echo ""
         failed=true
-    else
-        echo "Test passed for $formatted_filename"
     fi
 done
 
@@ -58,7 +55,6 @@ for filename in `find $absolute_dir -type f -name "*.c"  -path "$absolute_dir/st
     [ -f "$filename" ] || break;
     no_ext=$(no_ext "$filename")
     formatted_filename=$(no_path "$no_ext")
-    echo "Testing $formatted_filename"
     compiler_output=$(eval "$1 $filename")
     if [ -f "$no_ext" ]; then
         echo ""
@@ -67,8 +63,6 @@ for filename in `find $absolute_dir -type f -name "*.c"  -path "$absolute_dir/st
         echo ""
         rm "$no_ext" >/dev/null 2>&1
         failed=true
-    else
-        echo "Test passed for $formatted_filename"
     fi
 done
 
