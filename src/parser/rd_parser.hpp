@@ -28,7 +28,7 @@ class RDParser : public Parser
             if (ast)
             {
                 std::cout << std::endl;
-                std::cout << "<--- Abstract Syntax Tree --." << std::endl;
+                std::cout << "<--- Abstract Syntax Tree --->" << std::endl;
                 PrettyPrintAST(ast);
             }
         }
