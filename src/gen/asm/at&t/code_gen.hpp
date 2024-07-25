@@ -18,12 +18,12 @@ class ATTCodeGenerator : public ASMCodeGenerator
     protected:
         std::string EvaluateArg(const RegisterArg& arg) override
         {
-            return "%" + arg._register; 
+            return "%" + RegisterUtility::to_string(arg._register); 
         }
 
-        std::string EvaluateArg(const OffsetArg& arg) override
+        std::string EvaluateArg(const PointerArg& arg) override
         {
-            return std::to_string(arg.offset) + "(%" + arg._register + ")";
+            return std::to_string(arg.offset) + "(%" + RegisterUtility::to_string(arg._register) + ")";
         }
 
         std::string EvaluateArg(const ImmediateArg& arg) override

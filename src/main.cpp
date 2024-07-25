@@ -3,8 +3,8 @@
 
 #include "compiler/compiler.hpp"
 
-const std::string STAGE_NUM = "stage6";
-const std::string TEST_FILE = "declare_statement.c";
+const std::string STAGE_NUM = "stage3";
+const std::string TEST_FILE = "div.c";
 
 int main(int argc, char *argv[])
 {

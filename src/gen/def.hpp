@@ -1,7 +1,7 @@
 #pragma once
 
-#include "generator.hpp"
 #include "asm/at&t/code_gen.hpp"
+#include "asm/generator.hpp"
 
 // construct a default code generator for arch
 static std::shared_ptr<CodeGenerator> CreateCodeGenerator()

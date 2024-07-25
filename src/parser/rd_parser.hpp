@@ -17,9 +17,9 @@ class RDParser : public Parser
         AbstractSyntax::Ref ParseFile(const std::string& filepath) override
         {
             m_Tokens = m_Lexer->LexFile(filepath); 
-            std::cout << "<--- Lexical Analysis --." << std::endl;
-            for (auto& token : m_Tokens)
-                std::cout << TOKEN_KIND_NAMES[token.kind] << ": " << (!token.value.empty() ? token.value : "NULL") << std::endl;
+            //std::cout << "<--- Lexical Analysis --." << std::endl;
+            //for (auto& token : m_Tokens)
+            //    std::cout << TOKEN_KIND_NAMES[token.kind] << ": " << (!token.value.empty() ? token.value : "NULL") << std::endl;
             return ParseProgram(); 
         }
 
@@ -88,7 +88,9 @@ class RDParser : public Parser
 
         Declaration::Ref ParseDeclaration()
         {
-            auto decl = CreateRef<Declaration>(); 
+            // TODO: introduce type system
+            // for now only int (4-bytes) exists
+            auto decl = CreateRef<Declaration>(4); 
             decl->variables.emplace_back(ParseVariable()); 
             auto token = PeekToken(); 
             while (token.kind == TokenKind::Comma)

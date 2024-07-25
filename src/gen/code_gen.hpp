@@ -7,7 +7,6 @@
 #include <iostream>
 
 #include "compiler/flags.hpp"
-#include "syntax/asm_arg.hpp"
 
 class CodeGenerator
 {

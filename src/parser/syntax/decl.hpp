@@ -14,13 +14,14 @@ struct Variable
 
 struct Declaration : public Statement
 {
+    size_t type_size = 0; 
     std::vector<Variable> variables; 
 
-    Declaration() : Statement(SyntaxType::Declaration)
+    Declaration(size_t type_size) : Statement(SyntaxType::Declaration), type_size(type_size)
     {
     }
 
-    Declaration(Variable var) : Statement(SyntaxType::Declaration)
+    Declaration(size_t type_size, Variable var) : Statement(SyntaxType::Declaration), type_size(type_size)
     {
         variables.emplace_back(var); 
     }

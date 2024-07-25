@@ -4,7 +4,9 @@
 #include <ostream>
 #include <string>
 
+#include "arg.hpp"
 #include "gen/code_gen.hpp"
+#include "instruction.hpp"
 
 class ASMCodeGenerator : public CodeGenerator
 {
@@ -21,35 +23,105 @@ class ASMCodeGenerator : public CodeGenerator
             m_IndentStr = std::string(m_IndentSize * m_Indents, ' ');
         }
 
-        void EmitOp(const std::string& op)
+        std::optional<OperandSize> InferSize(OpInstruction op, const AssemblyArg& dst)
         {
-            assert(m_OutputStream);
-            outputstream() << m_IndentStr << op << std::endl;
+            switch (dst.type())
+            {
+                case ArgType::Register:
+                    return std::make_optional<OperandSize>(RegisterUtility::register_size(dynamic_cast<const RegisterArg&>(dst)._register));
+            }                
+            return std::nullopt;
         }
 
-        void EmitOp(const std::string& op, const AssemblyArg& arg1)
+        std::optional<OperandSize> InferSize(OpInstruction op, const AssemblyArg& src, const AssemblyArg& dst)
         {
-            assert(m_OutputStream);
-            outputstream() << m_IndentStr << op << " " << EvaluateArg(arg1) << std::endl; 
+            auto src_size = InferSize(op, src); 
+            if (src_size) return src_size;
+            else return InferSize(op, dst); 
         }
 
-        void EmitOp(const std::string& op, const AssemblyArg&& arg1) { EmitOp(op, arg1); }
+        std::string FormatInstruction(OpInstruction op, OperandSize s)
+        {
+            switch (s)
+            {
+                case OperandSize::BYTE:  
+                     return InstructionUtility::to_string<OperandSize::BYTE>(op);
+                case OperandSize::WORD:  
+                    return InstructionUtility::to_string<OperandSize::WORD>(op);
+                case OperandSize::DWORD: 
+                    return InstructionUtility::to_string<OperandSize::DWORD>(op);
+                case OperandSize::QWORD: 
+                    return InstructionUtility::to_string<OperandSize::QWORD>(op);
+                default: return std::string(); 
+            }
+        }
 
-        void EmitOp(const std::string& op, const AssemblyArg& arg1, const AssemblyArg& arg2)
+        void EmitOp(OpInstruction op)
         {
             assert(m_OutputStream);
-            outputstream() << m_IndentStr << op << " " << EvaluateArg(arg1) << ", " << EvaluateArg(arg2) << std::endl;
+            outputstream() << m_IndentStr << InstructionUtility::to_string(op) << "\n";
+        }
+
+        template<OperandSize S>
+        void EmitOp(OpInstruction op, const AssemblyArg& dst)
+        {
+            assert(m_OutputStream); 
+            outputstream() << m_IndentStr << InstructionUtility::to_string<S>(op) << " " << EvaluateArg(dst) << "\n";
+        }
+
+        template<OperandSize S>
+        void EmitOp(OpInstruction op, AssemblyArg::Ref dst) { EmitOp<S>(op, *dst.get()); }
+
+        void EmitOp(OpInstruction op, const AssemblyArg& dst)
+        {
+            assert(m_OutputStream);
+            auto inferredSize = InferSize(op, dst);
+            std::string opString = InstructionUtility::to_string(op);
+            if (InstructionUtility::needs_operand_size(op))
+            {
+                if (inferredSize) opString = FormatInstruction(op, inferredSize.value()); 
+                else std::cout << "warning: Could not infer size for '" + opString +  "'\n";
+            }
+            outputstream() << m_IndentStr << opString << " " << EvaluateArg(dst) << "\n"; 
+        }
+
+        void EmitOp(OpInstruction op, const AssemblyArg&& dst) { EmitOp(op, dst); }
+        void EmitOp(OpInstruction op, AssemblyArg::Ref dst) { EmitOp(op, *dst.get()); }
+
+        template<OperandSize S>
+        void EmitOp(OpInstruction op, const AssemblyArg& src, const AssemblyArg& dst)
+        {
+            assert(m_OutputStream); 
+            outputstream() << m_IndentStr << InstructionUtility::to_string<S>(op) << " " << EvaluateArg(src) << ", " << EvaluateArg(dst) << "\n";
+        }
+
+        void EmitOp(OpInstruction op, const AssemblyArg& src, const AssemblyArg& dst)
+        {
+            assert(m_OutputStream);
+            auto inferredSize = InferSize(op, src, dst);
+            std::string opString = InstructionUtility::to_string(op);
+            if (InstructionUtility::needs_operand_size(op))
+            {
+                if (inferredSize) opString = FormatInstruction(op, inferredSize.value()); 
+                else std::cout << "warning: Could not infer size for '" + opString +  "'\n";
+            }
+            outputstream() << m_IndentStr << opString << " " << EvaluateArg(src) << ", " << EvaluateArg(dst) << "\n"; 
         } 
 
-        void EmitOp(const std::string& op, const AssemblyArg&& arg1, const AssemblyArg&& arg2) { EmitOp(op, arg1, arg2); }
+        void EmitOp(OpInstruction op, const AssemblyArg& src, AssemblyArg::Ref dst) { EmitOp(op, src, *dst.get()); }
+        void EmitOp(OpInstruction op, AssemblyArg::Ref src, const AssemblyArg& dst) { EmitOp(op, *src.get(), dst); }
+        void EmitOp(OpInstruction op, const AssemblyArg&& src, const AssemblyArg&& dst) { EmitOp(op, src, dst); }
+        void EmitOp(OpInstruction op, AssemblyArg::Ref src, const AssemblyArg&& dst) { EmitOp(op, *src.get(), dst); }
+        void EmitOp(OpInstruction op, const AssemblyArg&& src, AssemblyArg::Ref dst) { EmitOp(op, src, *dst.get()); }
+        void EmitOp(OpInstruction op, AssemblyArg::Ref src, AssemblyArg::Ref dst) { EmitOp(op, *src.get(), *dst.get()); }
 
-        void EmitLabel(const LabelArg& arg)
+        void EmitLabel(const LabelArg& label)
         {
             assert(m_OutputStream);
-            outputstream() << EvaluateArg(arg) << ":" << std::endl;
+            outputstream() << EvaluateArg(label) << ":" << std::endl;
         }
 
-        void EmitLabel(const LabelArg&& arg) { EmitLabel(arg); }
+        void EmitLabel(const LabelArg&& label) { EmitLabel(label); }
 
         LabelArg GenerateLabel()
         {
@@ -70,10 +142,10 @@ class ASMCodeGenerator : public CodeGenerator
         {
             switch (arg.type())
             {
-                case ArgType::Register:  return EvaluateArg(dynamic_cast<const RegisterArg&&>(arg));
-                case ArgType::Offset:    return EvaluateArg(dynamic_cast<const OffsetArg&&>(arg));
-                case ArgType::Immediate: return EvaluateArg(dynamic_cast<const ImmediateArg&&>(arg));
-                case ArgType::Label:     return EvaluateArg(dynamic_cast<const LabelArg&&>(arg));
+                case ArgType::Register:   return EvaluateArg(dynamic_cast<const RegisterArg&&>(arg));
+                case ArgType::Pointer:    return EvaluateArg(dynamic_cast<const PointerArg&&>(arg));
+                case ArgType::Immediate:  return EvaluateArg(dynamic_cast<const ImmediateArg&&>(arg));
+                case ArgType::Label:      return EvaluateArg(dynamic_cast<const LabelArg&&>(arg));
             }
             return std::string(); 
         }
@@ -81,12 +153,12 @@ class ASMCodeGenerator : public CodeGenerator
         std::string EvaluateArg(const AssemblyArg&& arg) { return EvaluateArg(arg); }
 
         virtual std::string EvaluateArg(const RegisterArg& arg)  = 0;
-        virtual std::string EvaluateArg(const OffsetArg& arg)    = 0; 
+        virtual std::string EvaluateArg(const PointerArg& arg)   = 0; 
         virtual std::string EvaluateArg(const ImmediateArg& arg) = 0;
         virtual std::string EvaluateArg(const LabelArg& arg)     = 0; 
 
         std::string EvaluateArg(const RegisterArg&& arg)  { return EvaluateArg(arg); }
-        std::string EvaluateArg(const OffsetArg&& arg)    { return EvaluateArg(arg); }
+        std::string EvaluateArg(const PointerArg&& arg)   { return EvaluateArg(arg); }
         std::string EvaluateArg(const ImmediateArg&& arg) { return EvaluateArg(arg); }
         std::string EvaluateArg(const LabelArg&& arg)     { return EvaluateArg(arg); }
 };

@@ -35,10 +35,9 @@ public:
 
     virtual int CreateVariable(const std::string& variableName, int offset)
     {
-        auto index = m_StackIndex;
-        m_VariableMap[variableName] = index;
         m_StackIndex -= offset;  
-        return index;
+        m_VariableMap[variableName] = m_StackIndex;
+        return m_StackIndex;
     }
     
     virtual int GetVariableOffset(const std::string& variableName)
