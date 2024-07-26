@@ -3,20 +3,7 @@
 #include <string>
 #include <ostream>
 
-#include "syntax/as.hpp"
-#include "syntax/program.hpp"
-#include "syntax/function.hpp"
-#include "syntax/expr.hpp"
-#include "syntax/assignment_op.hpp"
-
-namespace
-{
-    template<typename T>
-    std::shared_ptr<T> down_cast(AbstractSyntax::Ref ptr)
-    {
-        return std::dynamic_pointer_cast<T>(ptr); 
-    }
-};
+#include "syntax/includes.hpp"
 
 class ASTPrinter
 {
@@ -30,43 +17,43 @@ class ASTPrinter
             switch (syntax->type())
             {
                 case SyntaxType::Program: 
-                    PrintProgram(down_cast<Program>(syntax));
+                    PrintProgram(AbstractSyntax::RefCast<Program>(syntax));
                     break;
                 case SyntaxType::Function:
-                    PrintFunction(down_cast<Function>(syntax));
+                    PrintFunction(AbstractSyntax::RefCast<Function>(syntax));
                     break;
                 case SyntaxType::StatementExpression:
-                    PrintStatementExpression(down_cast<StatementExpression>(syntax));
+                    PrintStatementExpression(AbstractSyntax::RefCast<StatementExpression>(syntax));
                     break;
                 case SyntaxType::AssignmentOp:
-                    PrintAssignmentOp(down_cast<AssignmentOp>(syntax));
+                    PrintAssignmentOp(AbstractSyntax::RefCast<AssignmentOp>(syntax));
                     break;
                 case SyntaxType::Declaration:
-                    PrintDeclaration(down_cast<Declaration>(syntax));
+                    PrintDeclaration(AbstractSyntax::RefCast<Declaration>(syntax));
                     break;
                 case SyntaxType::CompoundBlock:
-                    PrintCompoundBlock(down_cast<CompoundBlock>(syntax));
+                    PrintCompoundBlock(AbstractSyntax::RefCast<CompoundBlock>(syntax));
                     break;
                 case SyntaxType::IfStatement:
-                    PrintIfStatement(down_cast<IfStatement>(syntax));
+                    PrintIfStatement(AbstractSyntax::RefCast<IfStatement>(syntax));
                     break;
                 case SyntaxType::Return:
-                    PrintReturn(down_cast<Return>(syntax));
+                    PrintReturn(AbstractSyntax::RefCast<Return>(syntax));
                     break;
                 case SyntaxType::IntConstant:
-                    PrintIntConstant(down_cast<IntConstant>(syntax));
+                    PrintIntConstant(AbstractSyntax::RefCast<IntConstant>(syntax));
                     break;
                 case SyntaxType::UnaryOp:
-                    PrintUnaryOp(down_cast<UnaryOp>(syntax));
+                    PrintUnaryOp(AbstractSyntax::RefCast<UnaryOp>(syntax));
                     break;
                 case SyntaxType::BinaryOp:
-                    PrintBinaryOp(down_cast<BinaryOp>(syntax));
+                    PrintBinaryOp(AbstractSyntax::RefCast<BinaryOp>(syntax));
                     break;
                 case SyntaxType::VariableRef:
-                    PrintVariableRef(down_cast<VariableRef>(syntax));
+                    PrintVariableRef(AbstractSyntax::RefCast<VariableRef>(syntax));
                     break;
                 case SyntaxType::Assignment:
-                    PrintAssignment(down_cast<Assignment>(syntax));
+                    PrintAssignment(AbstractSyntax::RefCast<Assignment>(syntax));
                     break;
             }
         }

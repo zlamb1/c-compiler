@@ -6,6 +6,7 @@
 #include "gen/asm.hpp"
 #include "gen/code_gen.hpp"
 #include "gen/def.hpp"
+#include "ir/tac.hpp"
 
 class CompilerBackend
 {
@@ -25,6 +26,11 @@ class CompilerBackend
         void GenerateCode(CompilerFlags flags, AbstractSyntax::Ref ast)
         {
             if (ast == nullptr) return; 
+            // TAC generation
+            TACGenerator generator{};
+            generator.GenerateStatements(ast); 
+            generator.LogStatements();
+            // output
             auto outputpath = flags.outputpath + ".s"; 
             auto os = std::make_shared<std::ofstream>(outputpath); 
             m_CodeGenerator->SetOutputStream(os);

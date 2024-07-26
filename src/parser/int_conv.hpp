@@ -42,7 +42,7 @@ static int parse_c_int(const std::string& str)
             for (size_t i = 0; i < hex.length(); i++)
             {
                 int digit = HEX_DIGITS[hex[i]];
-                accumulator += pow(16, hex.length() - i - 1) * digit; 
+                accumulator += std::pow(16, hex.length() - i - 1) * digit; 
             }
             return accumulator; 
         }
@@ -54,7 +54,7 @@ static int parse_c_int(const std::string& str)
             for (size_t i = 1; i < str.length(); i++)
             {
                 int digit = str[i] - '0'; 
-                accumulator += pow(8, str.length() - i - 1) * digit; 
+                accumulator += std::pow(8, str.length() - i - 1) * digit; 
             }
             return accumulator; 
         }

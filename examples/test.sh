@@ -42,8 +42,8 @@ for filename in `find $absolute_dir -type f -name "*.c" -path "$absolute_dir/sta
     if [ "$exit_code" != "$custom_exit_code" ]; then
         echo ""
         echo "Test failed for $formatted_filename"
-        echo "Excepted output: $exit_code"
-        echo "Actual output: $custom_exit_code"
+        echo "Excepted exit code: $exit_code"
+        echo "Actual exit code: $custom_exit_code"
         echo "Compiler output: $compiler_output"
         echo ""
         failed=true
