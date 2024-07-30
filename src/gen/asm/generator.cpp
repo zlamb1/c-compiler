@@ -56,6 +56,13 @@ void ASMGenerator::GenerateAssembly(const TACGenerator& generator)
                 auto assign = TAC::Statement::RefCast<TAC::AssignStatement>(statement);
                 auto src = FetchVarLocation(assign->rhs); 
                 auto dst = FetchVarLocation(assign->lhs->name); 
+                if (IsPointer(src) && IsPointer(dst))
+                {
+                    auto _reg = allocator.AllocRegister();
+                    m_CodeGenerator.EmitOp(OpInstruction::MOV, src, RegisterArg(_reg));
+                    src = CreateRef<RegisterArg>(_reg); 
+                    allocator.FreeRegister(_reg);
+                }
                 m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *src.get(), *dst.get());
                 break;
             }
@@ -266,12 +273,5 @@ void ASMGenerator::GenerateQuad(TAC::QuadStatement::Ref quad)
             allocator.FreeRegister(_reg); 
             break;
         }
-        case TAC::OpCode::BOOL_AND:
-        {
-
-            break;
-        }
-        case TAC::OpCode::BOOL_OR:
-            break;
     } 
 }

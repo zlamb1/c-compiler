@@ -33,9 +33,20 @@ protected:
     TAC::Operand::Ref EvaluateExpression(AbstractSyntax::Ref syntax);
     TAC::Operand::Ref EvaluateExpression(AbstractSyntax::Ref syntax, VariableRef::Ref dst);
 
-    inline void CheckVar(const std::string& varName)
+    inline bool VarExists(const std::string& varName)
     {
-        if (m_SymbolTable.find(varName) == m_SymbolTable.end())
+        return m_SymbolTable.find(varName) != m_SymbolTable.end(); 
+    }
+
+    inline void CheckVarUndefined(const std::string& varName)
+    {
+        if (VarExists(varName))
+            throw std::runtime_error("error: Redeclaration of identifier '" + varName + "'"); 
+    }
+
+    inline void CheckVarDefined(const std::string& varName)
+    {
+        if (!VarExists(varName))
             throw std::runtime_error("error: Unknown identifier '" + varName + "'");
     }
 

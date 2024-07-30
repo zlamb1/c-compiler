@@ -120,8 +120,10 @@ void TACGenerator::EvaluateSyntax(AbstractSyntax::Ref syntax)
             auto decl = AbstractSyntax::RefCast<Declaration>(syntax);
             for (auto var : decl->variables)
             {
-                auto lhs = CreateRef<VariableRef>(var.name); 
-                auto rhs = EvaluateExpression(var.expr, lhs); 
+                CheckVarUndefined(var.name);
+                auto lhs = CreateRef<VariableRef>(var.name);  
+                auto rhs = var.expr ? EvaluateExpression(var.expr, lhs) : 
+                    CreateRef<TAC::Operand>(CreateRef<IntConstant>(0)); 
                 auto assign = CreateRef<TAC::AssignStatement>(lhs, rhs); 
                 auto symbol = VarSymbol(var.name, 4);
                 symbol.range = VarRange(m_Statements.size());
@@ -268,7 +270,7 @@ TAC::Operand::Ref TACGenerator::EvaluateExpression(AbstractSyntax::Ref syntax, V
         case SyntaxType::VariableRef:
         {
             auto ref = AbstractSyntax::RefCast<VariableRef>(syntax);
-            CheckVar(ref->name);
+            CheckVarDefined(ref->name);
             UpdateRange(ref);
             return CreateRef<TAC::Operand>(ref);
         }
@@ -281,6 +283,11 @@ TAC::Operand::Ref TACGenerator::EvaluateExpression(AbstractSyntax::Ref syntax, V
             UpdateRange(rhs);
             auto assign = CreateRef<TAC::AssignStatement>(lhs, rhs); 
             m_Statements.emplace_back(assign); 
+            if (dst != nullptr)
+            {
+                UpdateRange(lhs);
+                m_Statements.emplace_back(CreateRef<TAC::AssignStatement>(dst, CreateRef<TAC::Operand>(lhs)));
+            }
             return rhs;
         }
     }

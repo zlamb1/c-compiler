@@ -99,9 +99,14 @@ private:
         return false;
     }
 
-    inline bool IsImmediate(AssemblyArg::Ref arg)
+    static inline bool IsImmediate(AssemblyArg::Ref arg)
     {
         return arg->type() == ArgType::Immediate;
+    }
+
+    static inline bool IsPointer(AssemblyArg::Ref arg)
+    {
+        return arg->type() == ArgType::Pointer; 
     }
 
     AssemblyArg::Ref FetchVarLocation(const std::string& name)

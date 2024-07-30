@@ -42,7 +42,6 @@ void Compiler::CompileProgram()
         m_CompilerBackend->GenerateCode(m_Flags, ast); 
     } catch (ParseException exc)
     {
-        std::cout << "Failed to parse file: " << std::endl;
         std::cout << exc.what() << std::endl;
     }
 }
@@ -66,10 +65,10 @@ void Compiler::ScanFlags(int argc, char* argv[])
 
 void Compiler::LogWarn(const char* msg)
 {
-    std::cout << "[CWarning] " << msg << std::endl; 
+    std::cerr << "warning: " << msg << std::endl; 
 }
 
 void Compiler::LogError(const char* msg)
 {
-    std::cout << "[CError] " << msg << std::endl; 
+    std::cerr << "error: " << msg << std::endl; 
 }
