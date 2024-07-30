@@ -206,8 +206,36 @@ TAC::Operand::Ref TACGenerator::EvaluateExpression(AbstractSyntax::Ref syntax, V
         {
             auto op = AbstractSyntax::RefCast<BinaryOp>(syntax);
             auto lhs = CreateOperand(op->lvalue);
-            auto rhs = CreateOperand(op->rvalue);
             UpdateRange(lhs); 
+            switch (op->OpType())
+            {
+                case BinaryOpType::LogicalAnd:
+                case BinaryOpType::LogicalOr:
+                {
+                    auto short_circuit_op = op->OpType() == BinaryOpType::LogicalAnd ? TAC::OpCode::EQL : TAC::OpCode::NEQL;
+                    auto end = CreateLabel(); 
+                    auto set = CreateLabel(); 
+                    auto short_circuit_label = op->OpType() == BinaryOpType::LogicalAnd ? end : set; 
+                    auto precond = CreateTempVar(); 
+                    auto quad = CreateRef<TAC::QuadStatement>(short_circuit_op, 
+                        CreateRef<TAC::Operand>(CreateRef<IntConstant>(0)), lhs, precond); 
+                    m_Statements.emplace_back(quad);
+                    m_Statements.emplace_back(CreateRef<TAC::ConditionStatement>(CreateRef<TAC::Operand>(precond), short_circuit_label));
+                    auto rhs = CreateOperand(op->rvalue);
+                    UpdateRange(rhs);
+                    if (dst == nullptr) dst = CreateTempVar();
+                    quad = CreateRef<TAC::QuadStatement>(TAC::OpCode::NEQL, 
+                        CreateRef<TAC::Operand>(CreateRef<IntConstant>(0)), rhs, dst); 
+                    m_Statements.emplace_back(quad);
+                    m_Statements.emplace_back(CreateRef<TAC::GotoStatement>(end));
+                    m_Statements.emplace_back(CreateRef<TAC::LabelStatement>(set));
+                    m_Statements.emplace_back(CreateRef<TAC::AssignStatement>(dst, 
+                        CreateRef<TAC::Operand>(CreateRef<IntConstant>(op->OpType() == BinaryOpType::LogicalAnd ? 0 : 1))));
+                    m_Statements.emplace_back(CreateRef<TAC::LabelStatement>(end));
+                    return CreateRef<TAC::Operand>(dst); 
+                }
+            }                
+            auto rhs = CreateOperand(op->rvalue);
             UpdateRange(rhs);
             if (op->OpType() == BinaryOpType::Comma)
                 return rhs; 
@@ -240,6 +268,7 @@ TAC::Operand::Ref TACGenerator::EvaluateExpression(AbstractSyntax::Ref syntax, V
         case SyntaxType::VariableRef:
         {
             auto ref = AbstractSyntax::RefCast<VariableRef>(syntax);
+            CheckVar(ref->name);
             UpdateRange(ref);
             return CreateRef<TAC::Operand>(ref);
         }

@@ -95,7 +95,8 @@ void ASMGenerator::GenerateAssembly(const TACGenerator& generator)
     {  
         auto ret_val = returnStatement->ret_val;
         auto src = FetchVarLocation(ret_val); 
-        m_CodeGenerator.EmitOp(OpInstruction::MOV, src, RegisterArg(Register::EAX)); 
+        if (!IsRegister(src, Register::EAX))
+            m_CodeGenerator.EmitOp(OpInstruction::MOV, src, RegisterArg(Register::EAX)); 
     }
     else m_CodeGenerator.EmitOp(OpInstruction::MOV, ImmediateArg(0), RegisterArg(Register::EAX)); 
     // generate function prologue
@@ -230,19 +231,46 @@ void ASMGenerator::GenerateQuad(TAC::QuadStatement::Ref quad)
             m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::SAR, *rhs_loc.get(), *dst.get()); 
             break;
         case TAC::OpCode::EQL:
-            break;
         case TAC::OpCode::NEQL:
-            break;
         case TAC::OpCode::LT:
-            break;
         case TAC::OpCode::LTE:
-            break;
         case TAC::OpCode::GT:
-            break;
         case TAC::OpCode::GTE:
+        {
+            auto _reg = allocator.AllocRegister(); 
+            auto lower_byte = RegisterUtility::get_lower_byte(_reg);
+            // swap sides to get proper comparisons
+            std::swap(lhs_loc, rhs_loc);
+            // load rhs if immediate
+            if (IsImmediate(rhs_loc))
+            {
+                auto _reg = allocator.AllocRegister();
+                m_CodeGenerator.EmitOp(OpInstruction::MOV, rhs_loc, RegisterArg(_reg)); 
+                rhs_loc = CreateRef<RegisterArg>(_reg); 
+                allocator.FreeRegister(_reg);
+            }
+            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::CMP, *lhs_loc.get(), *rhs_loc.get());
+            auto comp = OpInstruction::SETE;
+            switch (op)
+            {
+                case TAC::OpCode::NEQL: comp = OpInstruction::SETNE; break;
+                case TAC::OpCode::LT:   comp = OpInstruction::SETL;  break;
+                case TAC::OpCode::LTE:  comp = OpInstruction::SETLE; break;
+                case TAC::OpCode::GT:   comp = OpInstruction::SETG;  break;
+                case TAC::OpCode::GTE:  comp = OpInstruction::SETGE; break;
+            }
+            m_CodeGenerator.EmitOp(comp, RegisterArg(lower_byte));
+            // sign-extend lower byte
+            m_CodeGenerator.EmitOp(OpInstruction::MOVZ, RegisterArg(lower_byte), RegisterArg(_reg)); 
+            m_CodeGenerator.EmitOp(OpInstruction::MOV, RegisterArg(_reg), dst);
+            allocator.FreeRegister(_reg); 
             break;
+        }
         case TAC::OpCode::BOOL_AND:
+        {
+
             break;
+        }
         case TAC::OpCode::BOOL_OR:
             break;
     } 

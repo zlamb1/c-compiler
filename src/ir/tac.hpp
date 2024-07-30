@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <stdexcept>
 #include <vector>
 #include <unordered_map>
 
@@ -31,6 +32,12 @@ protected:
     void EvaluateSyntax(AbstractSyntax::Ref syntax);
     TAC::Operand::Ref EvaluateExpression(AbstractSyntax::Ref syntax);
     TAC::Operand::Ref EvaluateExpression(AbstractSyntax::Ref syntax, VariableRef::Ref dst);
+
+    inline void CheckVar(const std::string& varName)
+    {
+        if (m_SymbolTable.find(varName) == m_SymbolTable.end())
+            throw std::runtime_error("error: Unknown identifier '" + varName + "'");
+    }
 
     inline void UpdateRange(VariableRef::Ref ref)
     {

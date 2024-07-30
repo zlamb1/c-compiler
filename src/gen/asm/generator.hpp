@@ -99,6 +99,11 @@ private:
         return false;
     }
 
+    inline bool IsImmediate(AssemblyArg::Ref arg)
+    {
+        return arg->type() == ArgType::Immediate;
+    }
+
     AssemblyArg::Ref FetchVarLocation(const std::string& name)
     {
         auto symbol = m_SymbolTable[name]; 

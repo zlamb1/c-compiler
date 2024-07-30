@@ -23,12 +23,19 @@ class CompilerBackend
             #endif
         }
 
-        void GenerateCode(CompilerFlags flags, AbstractSyntax::Ref ast)
+        bool GenerateCode(CompilerFlags flags, AbstractSyntax::Ref ast)
         {
-            if (ast == nullptr) return; 
+            if (ast == nullptr) return false; 
             // TAC generation
             TACGenerator generator{};
-            generator.GenerateStatements(ast); 
+            try 
+            {
+                generator.GenerateStatements(ast); 
+            } catch (const std::exception& exc)
+            {
+                std::cerr << exc.what() << std::endl; 
+                return false; 
+            }
             generator.LogStatements();
             // output
             auto outputpath = flags.outputpath + ".s"; 
@@ -39,14 +46,15 @@ class CompilerBackend
                 m_ASMGenerator->GenerateAssembly(generator); 
             } catch (const std::exception& exc)
             {
-                std::cout << exc.what() << std::endl; 
-                // clean up file
+                std::cerr << exc.what() << std::endl; 
+                // clean up file I/O
                 std::remove(outputpath.c_str());
                 os->close(); 
-                return; 
+                return false; 
             }
             os->close(); 
             m_Assembler->AssembleProgram(flags.outputpath + ".s", flags.outputpath);
+            return true;
         }
 
     private:

@@ -38,9 +38,7 @@ void Compiler::CompileProgram()
         }
         // constant folding
         //OptimizeTree(ast);
-        // print tree
         m_Parser->PrintTree(ast); 
-        // generate x86-64
         m_CompilerBackend->GenerateCode(m_Flags, ast); 
     } catch (ParseException exc)
     {

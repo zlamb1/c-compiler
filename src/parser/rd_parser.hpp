@@ -192,17 +192,23 @@ class RDParser : public Parser
                 ConsumeToken(); 
                 auto lvalue = token.value; 
                 token = PeekToken(); 
-                if (token.kind != TokenKind::Equal)
+                switch (token.kind)
                 {
-                    if (TOKEN_TO_ASSIGNMENT_OP_TYPE.find(token.kind) != TOKEN_TO_ASSIGNMENT_OP_TYPE.end())
-                    {
+                    case TokenKind::Equal:
                         ConsumeToken(); 
-                        return CreateRef<AssignmentOp>(TOKEN_TO_ASSIGNMENT_OP_TYPE[token.kind], lvalue, ParseExpression()); 
-                    }
-                    ExceptParse("error: Unexpected token", token);
+                        return CreateRef<Assignment>(lvalue, ParseExpression());
+                    case TokenKind::Semicolon:
+                        RevertToken(); 
+                        return ParseLogicalOrExpression();
+                    default:
+                        if (TOKEN_TO_ASSIGNMENT_OP_TYPE.find(token.kind) != TOKEN_TO_ASSIGNMENT_OP_TYPE.end())
+                        {
+                            ConsumeToken(); 
+                            return CreateRef<AssignmentOp>(TOKEN_TO_ASSIGNMENT_OP_TYPE[token.kind], lvalue, ParseExpression()); 
+                        }
+                        RevertToken();
+                        return ParseLogicalOrExpression(); 
                 }
-                ConsumeToken(); 
-                return CreateRef<Assignment>(lvalue, ParseExpression());
             } else return ParseLogicalOrExpression(); 
         }
 
