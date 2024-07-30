@@ -36,7 +36,7 @@ class CompilerBackend
             m_CodeGenerator->SetOutputStream(os);
             try 
             {
-                m_ASMGenerator->GenerateSyntax(ast); 
+                m_ASMGenerator->GenerateAssembly(generator); 
             } catch (const std::exception& exc)
             {
                 std::cout << exc.what() << std::endl; 

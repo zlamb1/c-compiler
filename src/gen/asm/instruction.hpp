@@ -7,6 +7,7 @@
 enum class OpInstruction : int
 {
     MOV,
+    MOVZ,
     NOT,
     NEG,
     ADD,
@@ -41,6 +42,7 @@ namespace InstructionUtility
         switch (op)
         {
             case OpInstruction::MOV:   return "mov";
+            case OpInstruction::MOVZ:  return "movz"; 
             case OpInstruction::NOT:   return "not";
             case OpInstruction::NEG:   return "neg";
             case OpInstruction::ADD:   return "add";
@@ -66,7 +68,8 @@ namespace InstructionUtility
             case OpInstruction::PUSH:  return "push";
             case OpInstruction::POP:   return "pop";
             case OpInstruction::RET:   return "ret"; 
-            default: throw std::runtime_error("error: Unknown operation '" + std::to_string((int)op) + "'");
+            default: 
+                throw std::runtime_error("error: Unknown operation '" + std::to_string((int)op) + "'");
         }
         return std::string();
     }   
@@ -85,8 +88,9 @@ namespace InstructionUtility
     {
         switch (op)
         {
-            case OpInstruction::PUSH: return false;
-            case OpInstruction::POP:  return false;
+            case OpInstruction::PUSH:
+            case OpInstruction::POP:  
+                return false;
         }
         return true;
     }
@@ -95,8 +99,9 @@ namespace InstructionUtility
     {
         switch (op) 
         {
-            case OpInstruction::PUSH: return false;
-            case OpInstruction::POP:  return false;
+            case OpInstruction::PUSH:
+            case OpInstruction::POP:  
+                return false;
         }
         return true; 
     }
@@ -105,8 +110,9 @@ namespace InstructionUtility
     {
         switch (op) 
         {
-            case OpInstruction::PUSH: return false;
-            case OpInstruction::POP:  return false;
+            case OpInstruction::PUSH:
+            case OpInstruction::POP:
+                return false; 
         }
         return true; 
     }

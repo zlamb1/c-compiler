@@ -14,6 +14,7 @@ enum class Register : int
     CH, CL,
     DH, DL,
     SIL,
+    DIL,
     BPL,
     SPL,
     R8B,  R9B,  R10B, R11B,
@@ -68,6 +69,7 @@ namespace RegisterUtility
             case Register::DH:   return "dh";
             case Register::DL:   return "dl";
             case Register::SIL:  return "sil";
+            case Register::DIL:  return "dil"; 
             case Register::BPL:  return "bpl";
             case Register::SPL:  return "spl";
             case Register::R8B:  return "r8b";
@@ -132,7 +134,7 @@ namespace RegisterUtility
         return std::string("UNKNOWN_REGISTER"); 
     }
 
-    static inline OperandSize register_size(Register _register)
+    static inline OperandSize get_register_size(Register _register)
     {
         switch (_register)
         {
@@ -145,6 +147,7 @@ namespace RegisterUtility
             case Register::DH:   return OperandSize::BYTE;
             case Register::DL:   return OperandSize::BYTE;
             case Register::SIL:  return OperandSize::BYTE;
+            case Register::DIL:  return OperandSize::BYTE; 
             case Register::BPL:  return OperandSize::BYTE;
             case Register::SPL:  return OperandSize::BYTE;
             case Register::R8B:  return OperandSize::BYTE;
@@ -206,5 +209,82 @@ namespace RegisterUtility
         }
         std::cout << "warning: Unknown size for register '" + to_string(_register) + "'\n";
         return OperandSize::BYTE;
+    }
+
+    static inline Register get_lower_byte(Register _reg)
+    {
+        switch (_reg)
+        {
+            case Register::AL:
+            case Register::AH:
+            case Register::AX:
+            case Register::EAX:
+            case Register::RAX: return Register::AL;
+            case Register::BL:
+            case Register::BH:
+            case Register::BX:
+            case Register::EBX:
+            case Register::RBX: return Register::BL;
+            case Register::CL:
+            case Register::CH:
+            case Register::CX:
+            case Register::ECX:
+            case Register::RCX: return Register::CL;
+            case Register::DL:
+            case Register::DH:
+            case Register::DX:
+            case Register::EDX:
+            case Register::RDX: return Register::DL;
+            case Register::SIL:
+            case Register::SI:
+            case Register::ESI:
+            case Register::RSI: return Register::SIL;
+            case Register::DIL:
+            case Register::DI:
+            case Register::EDI:
+            case Register::RDI: return Register::DIL;
+            case Register::BPL: 
+            case Register::BP:
+            case Register::EBP:
+            case Register::RBP: return Register::BPL;
+            case Register::SPL:
+            case Register::SP:
+            case Register::ESP:
+            case Register::RSP: return Register::SPL;
+            case Register::R8B:
+            case Register::R8W:
+            case Register::R8D:
+            case Register::R8:  return Register::R8B;
+            case Register::R9B:
+            case Register::R9W:
+            case Register::R9D:
+            case Register::R9:  return Register::R9B;
+            case Register::R10B:
+            case Register::R10W:
+            case Register::R10D:
+            case Register::R10:  return Register::R10B;
+            case Register::R11B:
+            case Register::R11W:
+            case Register::R11D:
+            case Register::R11:  return Register::R11B;
+            case Register::R12B:
+            case Register::R12W:
+            case Register::R12D:
+            case Register::R12:  return Register::R12B;
+            case Register::R13B:
+            case Register::R13W:
+            case Register::R13D:
+            case Register::R13:  return Register::R13B;
+            case Register::R14B:
+            case Register::R14W:
+            case Register::R14D:
+            case Register::R14:  return Register::R14B;
+            case Register::R15B:
+            case Register::R15W:
+            case Register::R15D:
+            case Register::R15:  return Register::R15B;
+        }
+        std::cerr << "error: Cannot get lower byte for register '" << to_string(_reg) << "'\n";
+        return Register::AL;
     }
 };

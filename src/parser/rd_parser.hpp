@@ -83,7 +83,7 @@ class RDParser : public Parser
                 else if (token.value == "if") return ParseIfStatement(); 
             } else if (token.kind == TokenKind::LeftBrace) return ParseCompoundBlock(); 
             else if (token.kind == TokenKind::Semicolon) statement = CreateRef<StatementExpression>(nullptr);  
-            else statement = CreateRef<StatementExpression>(ParseExpression()); 
+            else statement = CreateRef<StatementExpression>(ParseExpression());
             token = NextToken(); 
             if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'", token);
             return statement; 
@@ -199,8 +199,7 @@ class RDParser : public Parser
                         ConsumeToken(); 
                         return CreateRef<AssignmentOp>(TOKEN_TO_ASSIGNMENT_OP_TYPE[token.kind], lvalue, ParseExpression()); 
                     }
-                    RevertToken(); 
-                    return ParseLogicalOrExpression(); 
+                    ExceptParse("error: Unexpected token", token);
                 }
                 ConsumeToken(); 
                 return CreateRef<Assignment>(lvalue, ParseExpression());

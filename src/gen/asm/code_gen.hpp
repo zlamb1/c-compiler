@@ -28,7 +28,7 @@ class ASMCodeGenerator : public CodeGenerator
             switch (dst.type())
             {
                 case ArgType::Register:
-                    return std::make_optional<OperandSize>(RegisterUtility::register_size(dynamic_cast<const RegisterArg&>(dst)._register));
+                    return std::make_optional<OperandSize>(RegisterUtility::get_register_size(dynamic_cast<const RegisterArg&>(dst)._register));
             }                
             return std::nullopt;
         }
@@ -100,7 +100,17 @@ class ASMCodeGenerator : public CodeGenerator
             assert(m_OutputStream);
             auto inferredSize = InferSize(op, src, dst);
             std::string opString = InstructionUtility::to_string(op);
-            if (InstructionUtility::needs_operand_size(op))
+            if (op == OpInstruction::MOVZ)
+            {
+                auto src_size = InferSize(op, src); 
+                auto dst_size = InferSize(op, dst);
+                if (!src_size || !dst_size)
+                {
+                    std::cerr << "error: Expected register args for instruction 'movz'\n";
+                    return;
+                }
+                opString += OperandUtility::to_string(src_size.value()) + OperandUtility::to_string(dst_size.value());
+            } else if (InstructionUtility::needs_operand_size(op))
             {
                 if (inferredSize) opString = FormatInstruction(op, inferredSize.value()); 
                 else std::cout << "warning: Could not infer size for '" + opString +  "'\n";

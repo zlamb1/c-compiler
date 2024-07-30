@@ -78,6 +78,8 @@ namespace TAC
                 std::to_string(std::get<IntConstant::Ref>(member)->value) :
                 std::get<VariableRef::Ref>(member)->name;
         }
+        int get_value() { return std::get<IntConstant::Ref>(member)->value; }
+        std::string get_name() { return std::get<VariableRef::Ref>(member)->name; }
         OperandType type() { return m_Type; }
         typedef std::shared_ptr<Operand> Ref; 
     private:
@@ -88,6 +90,7 @@ namespace TAC
         Goto,
         Condition,
         Assign,
+        Triple,
         Quad,
         Label,
         Return
@@ -140,6 +143,18 @@ namespace TAC
         } 
 
         typedef std::shared_ptr<AssignStatement> Ref; 
+    };
+    struct TripleStatement : public Statement
+    {
+        OpCode op; 
+        Operand::Ref rhs; 
+        VariableRef::Ref result; 
+
+        TripleStatement(OpCode op, Operand::Ref rhs, VariableRef::Ref result) : Statement(StatementType::Triple), op(op), rhs(rhs), result(result)
+        {
+        }
+
+        typedef std::shared_ptr<TripleStatement> Ref; 
     };
     struct QuadStatement : public Statement
     {
