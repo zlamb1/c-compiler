@@ -170,6 +170,16 @@ void ASMGenerator::GenerateQuad(VarContext& var_context, TAC::QuadStatement::Ref
             m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::SUB, *rhs_loc.get(), *dst_loc.get()); 
             break;
         case TAC::OpCode::MUL:
+            // dst operand of IMUL cannot be memory pointer
+            if (dst_loc->type() == ArgType::Pointer)
+            {
+                auto _reg = allocator.AllocRegister(); 
+                m_CodeGenerator.EmitOp(OpInstruction::MOV, *lhs_loc.get(), RegisterArg(_reg)); 
+                m_CodeGenerator.EmitOp(OpInstruction::IMUL, *rhs_loc.get(), RegisterArg(_reg)); 
+                m_CodeGenerator.EmitOp(OpInstruction::MOV, RegisterArg(_reg), *dst_loc.get());
+                allocator.FreeRegister(_reg);
+                break;
+            }
             if (!IsSameRegister(lhs_loc, dst_loc))
                 m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst_loc.get()); 
             m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::IMUL, *rhs_loc.get(), *dst_loc.get()); 
