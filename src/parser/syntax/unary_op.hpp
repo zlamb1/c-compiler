@@ -6,7 +6,11 @@ enum class UnaryOpType : int
 {
     Negation,
     Complement,
-    LogicalNegation
+    LogicalNegation,
+    PrefixIncrement,
+    PostfixIncrement,
+    PrefixDecrement,
+    PostfixDecrement
 };
 
 class UnaryOp : public Expression

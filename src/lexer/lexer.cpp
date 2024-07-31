@@ -175,6 +175,16 @@ Token Lexer::LexToken(StackString& str)
                     auto token = CreateToken(TokenKind::CaretEquals, str);
                     str.pop(2);
                     return token;
+                } else if (charSequence == "++")
+                {
+                    auto token = CreateToken(TokenKind::PlusPlus, str);
+                    str.pop(2);
+                    return token; 
+                } else if (charSequence == "--")
+                {
+                    auto token = CreateToken(TokenKind::MinusMinus, str);
+                    str.pop(2);
+                    return token;
                 }
             }
 

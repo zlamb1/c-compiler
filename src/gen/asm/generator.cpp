@@ -59,6 +59,7 @@ void ASMGenerator::GenerateAssembly(TACGenerator& generator)
             {
                 auto assign = TAC::Statement::RefCast<TAC::AssignStatement>(statement);
                 auto src = FetchVarLocation(assign->rhs); 
+                AllocIfTemp(var_context, assign->lhs);
                 auto dst = FetchVarLocation(var_context, assign->lhs); 
                 if (IsPointer(src) && IsPointer(dst))
                 {
@@ -121,7 +122,6 @@ void ASMGenerator::GenerateTriple(VarContext& var_context, TAC::TripleStatement:
 {
     auto op = triple->op; 
     AllocIfTemp(var_context, triple->dst);
-    
     auto src = FetchVarLocation(triple->rhs); 
     auto dst_loc = FetchVarLocation(var_context, triple->dst); 
     switch (op)

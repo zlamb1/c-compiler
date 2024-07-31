@@ -199,9 +199,36 @@ TAC::Operand::Ref TACGenerator::EvaluateExpression(AbstractSyntax::Ref syntax, V
         case SyntaxType::UnaryOp:
         {
             auto op = AbstractSyntax::RefCast<UnaryOp>(syntax);
+            if (dst == nullptr) dst = CreateTempVar(); 
+            switch (op->OpType())
+            {
+                case UnaryOpType::PostfixDecrement:
+                case UnaryOpType::PostfixIncrement:
+                {
+                    auto rhs = CreateOperand(op->expr); 
+                    auto op_code = op->OpType() == UnaryOpType::PostfixDecrement ? TAC::OpCode::SUB :
+                        TAC::OpCode::ADD;
+                    UpdateRange(rhs);
+                    m_Statements.emplace_back(CreateRef<TAC::AssignStatement>(dst, rhs)); 
+                    m_Statements.emplace_back(CreateRef<TAC::QuadStatement>(op_code, 
+                        rhs, CreateRef<TAC::Operand>(CreateRef<IntConstant>(1)), rhs->get_symbol()));
+                    return CreateRef<TAC::Operand>(dst);
+                }
+                case UnaryOpType::PrefixDecrement:
+                case UnaryOpType::PrefixIncrement:
+                {
+                    auto rhs = CreateOperand(op->expr); 
+                    auto op_code = op->OpType() == UnaryOpType::PrefixDecrement ? TAC::OpCode::SUB :
+                        TAC::OpCode::ADD;
+                    UpdateRange(rhs);
+                    m_Statements.emplace_back(CreateRef<TAC::QuadStatement>(op_code, 
+                        rhs, CreateRef<TAC::Operand>(CreateRef<IntConstant>(1)), rhs->get_symbol()));
+                    m_Statements.emplace_back(CreateRef<TAC::AssignStatement>(dst, rhs)); 
+                    return CreateRef<TAC::Operand>(dst);
+                }
+            }
             auto rhs = CreateOperand(op->expr); 
             UpdateRange(rhs);
-            if (dst == nullptr) dst = CreateTempVar(); 
             auto triple = CreateRef<TAC::TripleStatement>(TAC::convert_unary_op(op->OpType()), rhs, dst); 
             m_Statements.emplace_back(triple);
             return CreateRef<TAC::Operand>(dst);
@@ -242,7 +269,10 @@ TAC::Operand::Ref TACGenerator::EvaluateExpression(AbstractSyntax::Ref syntax, V
             auto rhs = CreateOperand(op->rvalue);
             UpdateRange(rhs);
             if (op->OpType() == BinaryOpType::Comma)
+            {
+                m_Statements.emplace_back(CreateRef<TAC::AssignStatement>(dst, rhs));
                 return rhs; 
+            }
             if (dst == nullptr) dst = CreateTempVar(); 
             auto quad = CreateRef<TAC::QuadStatement>(TAC::convert_binary_op(op->OpType()), 
                 lhs, rhs, dst); 

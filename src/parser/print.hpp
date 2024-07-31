@@ -186,9 +186,19 @@ class ASTPrinter
         {
             switch (op->OpType())
             {
-                case UnaryOpType::Negation:        m_OutputStream << "-"; break;
-                case UnaryOpType::Complement:      m_OutputStream << "~"; break;
-                case UnaryOpType::LogicalNegation: m_OutputStream << "!"; break;
+                case UnaryOpType::Negation:         m_OutputStream << "-"; break;
+                case UnaryOpType::Complement:       m_OutputStream << "~"; break;
+                case UnaryOpType::LogicalNegation:  m_OutputStream << "!"; break;
+                case UnaryOpType::PrefixDecrement:  m_OutputStream << "--"; break;
+                case UnaryOpType::PrefixIncrement:  m_OutputStream << "++"; break;
+                case UnaryOpType::PostfixDecrement:
+                    PrintSyntax(op->expr);
+                    m_OutputStream << "--";
+                    return;
+                case UnaryOpType::PostfixIncrement:
+                    PrintSyntax(op->expr);
+                    m_OutputStream << "++";
+                    return;
             }
             PrintSyntax(op->expr);
         }

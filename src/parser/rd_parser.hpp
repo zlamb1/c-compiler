@@ -359,18 +359,40 @@ class RDParser : public Parser
 
         Expression::Ref ParseTerm()
         {
-            auto factor = ParseFactor(); 
+            auto expr = ParseUnaryExpression(); 
             auto token = PeekToken(); 
             if (token.kind == TokenKind::None) ExceptParse("error: Incomplete term", token); 
             while (token.kind == TokenKind::Asterisk || token.kind == TokenKind::Slash || token.kind == TokenKind::Percent)
             {
                 ConsumeToken(); 
                 auto type = TOKEN_TO_BINARY_TYPE[token.kind]; 
-                auto nextFactor = ParseFactor(); 
-                factor = CreateRef<BinaryOp>(type, factor, nextFactor); 
+                auto nextExpr = ParseUnaryExpression(); 
+                expr = CreateRef<BinaryOp>(type, expr, nextExpr); 
                 token = PeekToken(); 
             }
-            return factor; 
+            return expr; 
+        }
+
+        Expression::Ref ParseUnaryExpression()
+        {
+            auto token = PeekToken();
+            if (TOKEN_TO_UNARY_TYPE.find(token.kind) != TOKEN_TO_UNARY_TYPE.end())
+            {
+                auto type = TOKEN_TO_UNARY_TYPE[token.kind];
+                ConsumeToken();
+                switch (token.kind)
+                {
+                    case TokenKind::PlusPlus:
+                    case TokenKind::MinusMinus:
+                    {
+                        token = NextToken(); 
+                        if (token.kind != TokenKind::Identifier) 
+                            ExceptParse("error: lvalue required for operator '" + TOKEN_KIND_NAMES[token.kind] + "'", token);
+                        return CreateRef<UnaryOp>(type, CreateRef<VariableRef>(token.value)); 
+                    }
+                }
+                return CreateRef<UnaryOp>(type, ParseUnaryExpression()); 
+            } else return ParseFactor(); 
         }
 
         Expression::Ref ParseFactor()
@@ -382,14 +404,24 @@ class RDParser : public Parser
                 token = NextToken();
                 if (token.kind != TokenKind::RightParenthesis) ExceptParse("error: expected ')'", token); 
                 return expr; 
-            } else if (TOKEN_TO_UNARY_TYPE.find(token.kind) != TOKEN_TO_UNARY_TYPE.end())
-            {
-                auto factor = ParseFactor(); 
-                return CreateRef<UnaryOp>(TOKEN_TO_UNARY_TYPE[token.kind], factor); 
             } else if (token.kind == TokenKind::IntConstant || token.kind == TokenKind::HexConstant)
                 return CreateRef<IntConstant>(parse_c_int(token.value)); 
             else if (token.kind == TokenKind::Identifier) 
-                return CreateRef<VariableRef>(token.value);
+            {
+                auto value = token.value;
+                token = PeekToken();
+                // parse postfix ops
+                switch (token.kind)
+                {
+                    case TokenKind::PlusPlus:
+                    case TokenKind::MinusMinus:
+                        ConsumeToken(); 
+                        auto op = token.kind == TokenKind::PlusPlus ? UnaryOpType::PostfixIncrement :
+                            UnaryOpType::PostfixDecrement;
+                        return CreateRef<UnaryOp>(op, CreateRef<VariableRef>(value)); 
+                }
+                return CreateRef<VariableRef>(value);
+            }
             else ExceptParse("error: Unexpected token '" + TOKEN_KIND_NAMES[token.kind] + "'", token); 
             return nullptr; 
         }
