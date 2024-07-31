@@ -4,6 +4,7 @@
 #include <variant>
 
 #include "parser/syntax/includes.hpp"
+#include "symbol.hpp"
 
 namespace TAC
 {
@@ -60,26 +61,26 @@ namespace TAC
     enum class OperandType : int
     {
         Constant,
-        Ref
+        Symbol
     };
     class Operand
     {
     public:
-        std::variant<IntConstant::Ref, VariableRef::Ref> member; 
+        std::variant<IntConstant::Ref, VarSymbol::Ref> member; 
         Operand(IntConstant::Ref constant) : m_Type(OperandType::Constant), member(constant)
         {
         }
-        Operand(VariableRef::Ref ref) : m_Type(OperandType::Ref), member(ref)
+        Operand(VarSymbol::Ref var_symbol) : m_Type(OperandType::Symbol), member(var_symbol)
         {
         }
         std::string to_string()
         {
             return m_Type == OperandType::Constant ? 
                 std::to_string(std::get<IntConstant::Ref>(member)->value) :
-                std::get<VariableRef::Ref>(member)->name;
+                std::get<VarSymbol::Ref>(member)->var_name;
         }
         int get_value() { return std::get<IntConstant::Ref>(member)->value; }
-        std::string get_name() { return std::get<VariableRef::Ref>(member)->name; }
+        VarSymbol::Ref get_symbol() { return std::get<VarSymbol::Ref>(member); }
         OperandType type() { return m_Type; }
         typedef std::shared_ptr<Operand> Ref; 
     private:
@@ -135,10 +136,10 @@ namespace TAC
     };
     struct AssignStatement : public Statement
     {
-        VariableRef::Ref lhs; 
+        VarSymbol::Ref lhs; 
         Operand::Ref rhs;
 
-        AssignStatement(VariableRef::Ref lhs, Operand::Ref rhs) : Statement(StatementType::Assign), lhs(lhs), rhs(rhs)
+        AssignStatement(VarSymbol::Ref lhs, Operand::Ref rhs) : Statement(StatementType::Assign), lhs(lhs), rhs(rhs)
         {
         } 
 
@@ -148,9 +149,9 @@ namespace TAC
     {
         OpCode op; 
         Operand::Ref rhs; 
-        VariableRef::Ref result; 
+        VarSymbol::Ref dst; 
 
-        TripleStatement(OpCode op, Operand::Ref rhs, VariableRef::Ref result) : Statement(StatementType::Triple), op(op), rhs(rhs), result(result)
+        TripleStatement(OpCode op, Operand::Ref rhs, VarSymbol::Ref dst) : Statement(StatementType::Triple), op(op), rhs(rhs), dst(dst)
         {
         }
 
@@ -160,9 +161,9 @@ namespace TAC
     {
         OpCode op;
         Operand::Ref lhs, rhs; 
-        VariableRef::Ref result; 
+        VarSymbol::Ref dst; 
 
-        QuadStatement(OpCode op, Operand::Ref lhs, Operand::Ref rhs, VariableRef::Ref result) : Statement(StatementType::Quad), op(op), lhs(lhs), rhs(rhs), result(result) 
+        QuadStatement(OpCode op, Operand::Ref lhs, Operand::Ref rhs, VarSymbol::Ref dst) : Statement(StatementType::Quad), op(op), lhs(lhs), rhs(rhs), dst(dst) 
         {
         }
 

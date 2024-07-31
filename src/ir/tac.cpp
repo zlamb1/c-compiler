@@ -33,7 +33,7 @@ void TACGenerator::LogStatements() const
             case TAC::StatementType::Assign:
             {
                 auto assign = TAC::Statement::RefCast<TAC::AssignStatement>(statement); 
-                auto lhs = assign->lhs->name; 
+                auto lhs = assign->lhs->var_name; 
                 auto rhs = assign->rhs->to_string();
                 std::cout << prefix << lhs << " = " << rhs << "\n"; 
                 break;
@@ -42,8 +42,8 @@ void TACGenerator::LogStatements() const
             {
                 auto triple = TAC::Statement::RefCast<TAC::TripleStatement>(statement);
                 auto rhs = triple->rhs->to_string(); 
-                auto result = triple->result;
-                std::cout << prefix << result->name << " = " << TAC::OP_CODE_SYMBOLS[triple->op] << rhs << "\n";
+                auto dst = triple->dst;
+                std::cout << prefix << dst->var_name << " = " << TAC::OP_CODE_SYMBOLS[triple->op] << rhs << "\n";
                 break;
             }
             case TAC::StatementType::Quad:
@@ -51,7 +51,7 @@ void TACGenerator::LogStatements() const
                 auto quad = TAC::Statement::RefCast<TAC::QuadStatement>(statement);
                 auto lhs = quad->lhs->to_string();
                 auto rhs = quad->rhs->to_string();
-                std::cout << prefix << quad->result->name << " = " << lhs 
+                std::cout << prefix << quad->dst->var_name << " = " << lhs 
                     << " " << TAC::OP_CODE_SYMBOLS[quad->op] << " " << rhs << "\n"; 
                 break;
             }
@@ -72,17 +72,17 @@ void TACGenerator::LogStatements() const
     }
 }    
 
-VariableRef::Ref TACGenerator::CreateTempVar()
+VarSymbol::Ref TACGenerator::CreateTempVar()
 {
     auto name = "t" + std::to_string(++m_TempCounter);
     // find unsued name
-    while (m_SymbolTable.find(name) != m_SymbolTable.end())
+    while (m_VarContext.current_scope_has_var(name))
         name = "t" + std::to_string(++m_TempCounter); 
-    auto symbol = VarSymbol(name, 4); 
-    symbol.is_temp = true;
-    symbol.range = VarRange(m_Statements.size());
-    m_SymbolTable[name] = symbol; 
-    return CreateRef<VariableRef>(name);
+    auto symbol = CreateRef<VarSymbol>(name, 4); 
+    symbol->is_temp = true;
+    symbol->range = VarRange(m_Statements.size());
+    m_VarContext.add_var(name, symbol);
+    return symbol;
 }
 
 std::string TACGenerator::CreateLabel()
@@ -120,20 +120,21 @@ void TACGenerator::EvaluateSyntax(AbstractSyntax::Ref syntax)
             auto decl = AbstractSyntax::RefCast<Declaration>(syntax);
             for (auto var : decl->variables)
             {
-                CheckVarUndefined(var.name);
-                auto lhs = CreateRef<VariableRef>(var.name);  
+                if (m_VarContext.current_scope_has_var(var.name))
+                    throw std::runtime_error("error: Redeclaration of identifier '" + var.name + "'");
+                auto lhs = CreateRef<VarSymbol>(var.name, 4);   
+                m_VarContext.add_var(var.name, lhs); 
                 auto rhs = var.expr ? EvaluateExpression(var.expr, lhs) : 
                     CreateRef<TAC::Operand>(CreateRef<IntConstant>(0)); 
-                auto assign = CreateRef<TAC::AssignStatement>(lhs, rhs); 
-                auto symbol = VarSymbol(var.name, 4);
-                symbol.range = VarRange(m_Statements.size());
-                m_SymbolTable[var.name] = symbol; 
+                lhs->range = VarRange(m_Statements.size() - 1);
             }
             break;
         }
-        case SyntaxType::CompoundBlock:            
+        case SyntaxType::CompoundBlock:    
+            m_VarContext.push_scope();        
             for (auto statement : AbstractSyntax::RefCast<CompoundBlock>(syntax)->statements)
-                EvaluateSyntax(statement); 
+                EvaluateSyntax(statement);
+            m_VarContext.pop_scope(); 
             break;
         case SyntaxType::IfStatement:
         {
@@ -153,7 +154,8 @@ void TACGenerator::EvaluateSyntax(AbstractSyntax::Ref syntax)
                 m_Statements.emplace_back(CreateRef<TAC::ConditionStatement>(condition, labels[i]));
             }
             auto _else = if_statement->else_statement; 
-            if (_else != nullptr) EvaluateSyntax(_else);
+            if (_else != nullptr) 
+                EvaluateSyntax(_else);
             m_Statements.emplace_back(CreateRef<TAC::GotoStatement>(end_label));
             for (size_t i = 0; i < len; i++)
             {
@@ -176,7 +178,7 @@ void TACGenerator::EvaluateSyntax(AbstractSyntax::Ref syntax)
         case SyntaxType::Assignment:
         {
             auto assignment = AbstractSyntax::RefCast<Assignment>(syntax);
-            auto lhs = CreateRef<VariableRef>(assignment->lvalue);
+            auto lhs = m_VarContext.get_var(assignment->lvalue);
             auto rhs = EvaluateExpression(assignment->rvalue);
             auto assign = CreateRef<TAC::AssignStatement>(lhs, rhs); 
             m_Statements.emplace_back(assign); 
@@ -187,10 +189,10 @@ void TACGenerator::EvaluateSyntax(AbstractSyntax::Ref syntax)
 
 TAC::Operand::Ref TACGenerator::EvaluateExpression(AbstractSyntax::Ref syntax)
 {
-    return EvaluateExpression(syntax, nullptr); 
+    return EvaluateExpression(syntax, nullptr);
 }
 
-TAC::Operand::Ref TACGenerator::EvaluateExpression(AbstractSyntax::Ref syntax, VariableRef::Ref dst)
+TAC::Operand::Ref TACGenerator::EvaluateExpression(AbstractSyntax::Ref syntax, VarSymbol::Ref dst)
 {
     switch (syntax->type())
     {
@@ -250,7 +252,7 @@ TAC::Operand::Ref TACGenerator::EvaluateExpression(AbstractSyntax::Ref syntax, V
         case SyntaxType::AssignmentOp:
         {
             auto op = AbstractSyntax::RefCast<AssignmentOp>(syntax); 
-            auto lhs = CreateRef<VariableRef>(op->lvalue); 
+            auto lhs = m_VarContext.get_var(op->lvalue);
             auto lhsOperand = CreateRef<TAC::Operand>(lhs);
             auto rhs = CreateOperand(op->rvalue);
             UpdateRange(lhs); 
@@ -270,14 +272,14 @@ TAC::Operand::Ref TACGenerator::EvaluateExpression(AbstractSyntax::Ref syntax, V
         case SyntaxType::VariableRef:
         {
             auto ref = AbstractSyntax::RefCast<VariableRef>(syntax);
-            CheckVarDefined(ref->name);
-            UpdateRange(ref);
-            return CreateRef<TAC::Operand>(ref);
+            auto symbol = m_VarContext.get_var(ref->name);
+            UpdateRange(symbol);
+            return CreateRef<TAC::Operand>(symbol);
         }
         case SyntaxType::Assignment:
         {
             auto assignment = AbstractSyntax::RefCast<Assignment>(syntax);
-            auto lhs = CreateRef<VariableRef>(assignment->lvalue);
+            auto lhs = m_VarContext.get_var(assignment->lvalue);
             auto rhs = CreateOperand(assignment->rvalue);
             UpdateRange(lhs);
             UpdateRange(rhs);

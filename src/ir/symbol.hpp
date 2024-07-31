@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <string>
 
 struct VarRange
@@ -17,15 +18,18 @@ struct VarRange
 
 struct VarSymbol
 {
-    std::string name; 
+    std::string var_name; 
     size_t byte_size = 1; 
     bool is_temp = false; 
     VarRange range; 
 
-    VarSymbol() 
+    VarSymbol()
     {
     }
-    VarSymbol(const std::string& name, size_t byte_size) : name(name), byte_size(byte_size), range()
+
+    VarSymbol(const std::string& var_name, size_t byte_size) : var_name(var_name), byte_size(byte_size), range()
     {
     }
+
+    typedef std::shared_ptr<VarSymbol> Ref; 
 };

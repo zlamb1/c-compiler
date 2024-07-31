@@ -11,7 +11,6 @@
 #include "reg_alloc.hpp"
 
 #include "gen/context.hpp"
-#include "gen/exc.hpp"
 #include "ir/tac.hpp"
 
 class VarLocation
@@ -50,23 +49,21 @@ public:
     {
     }
 
-    void GenerateAssembly(const TACGenerator& generator);
-    void GenerateTriple(TAC::TripleStatement::Ref triple);
-    void GenerateQuad(TAC::QuadStatement::Ref quad); 
+    void GenerateAssembly(TACGenerator& generator);
+    void GenerateTriple(VarContext& var_context, TAC::TripleStatement::Ref triple);
+    void GenerateQuad(VarContext& var_context, TAC::QuadStatement::Ref quad); 
 
 private: 
     ASMCodeGenerator& m_CodeGenerator; 
     RegisterAllocator allocator{}; 
     int m_StackIndex = 0; 
 
-    std::unordered_map<std::string, VarSymbol> m_SymbolTable; 
-    std::unordered_map<std::string, VarLocation> m_LocationTable;
+    std::unordered_map<VarSymbol::Ref, VarLocation> m_LocationTable;
 
-    void AllocIfTemp(const std::string& name)
+    void AllocIfTemp(VarContext& var_context, VarSymbol::Ref var_symbol)
     {
-        auto symbol = m_SymbolTable[name]; 
-        if (symbol.is_temp && m_LocationTable.find(name) == m_LocationTable.end()) 
-            m_LocationTable[name] = VarLocation(allocator.AllocRegister()); 
+        if (var_symbol->is_temp && m_LocationTable.find(var_symbol) == m_LocationTable.end()) 
+            m_LocationTable[var_symbol] = VarLocation(allocator.AllocRegister()); 
     }
 
     inline bool IsRegister(AssemblyArg::Ref arg, Register _register)
@@ -109,21 +106,19 @@ private:
         return arg->type() == ArgType::Pointer; 
     }
 
-    AssemblyArg::Ref FetchVarLocation(const std::string& name)
+    AssemblyArg::Ref FetchVarLocation(VarContext& var_context, VarSymbol::Ref var_symbol)
     {
-        auto symbol = m_SymbolTable[name]; 
-        auto loc = m_LocationTable[name];
-        if (symbol.is_temp) return CreateRef<RegisterArg>(loc._register); 
+        auto loc = m_LocationTable[var_symbol];
+        if (var_symbol->is_temp) return CreateRef<RegisterArg>(loc._register); 
         else return CreateRef<PointerArg>(Register::RBP, loc.stack_offset); 
     }
 
     AssemblyArg::Ref FetchVarLocation(TAC::Operand::Ref operand)
     {
         if (operand->type() == TAC::OperandType::Constant)
-        {
             return CreateRef<ImmediateArg>(operand->get_value());
-        } else {
-            auto loc = m_LocationTable[operand->get_name()];
+        else {
+            auto loc = m_LocationTable[operand->get_symbol()];
             if (loc.type() == VarLocation::Type::Register)
                 return CreateRef<RegisterArg>(loc._register); 
             else return CreateRef<PointerArg>(Register::RBP, loc.stack_offset); 

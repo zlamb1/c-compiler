@@ -1,19 +1,24 @@
 #include "generator.hpp"
 
-void ASMGenerator::GenerateAssembly(const TACGenerator& generator)
+void ASMGenerator::GenerateAssembly(TACGenerator& generator)
 {
-    m_SymbolTable = generator.GetSymbolTable(); 
+    auto statements = generator.GetStatements();
+    auto var_context = generator.GetVarContext(); 
     m_CodeGenerator.EmitFun("main"); 
     m_CodeGenerator.IncreaseIndentation(); 
     // calculate stack size
-    for (auto pair : m_SymbolTable)
+    for (auto statement : statements)
     {
-        auto symbol = pair.second;
-        if (!symbol.is_temp)
+        if (statement->type() == TAC::StatementType::Assign)
         {
-            m_StackIndex -= symbol.byte_size;
-            auto loc = VarLocation(m_StackIndex); 
-            m_LocationTable[pair.first] = loc; 
+            auto assign = TAC::Statement::RefCast<TAC::AssignStatement>(statement);
+            auto symbol = assign->lhs; 
+            if (!symbol->is_temp && m_LocationTable.find(symbol) == m_LocationTable.end())
+            {
+                m_StackIndex -= symbol->byte_size;
+                auto loc = VarLocation(m_StackIndex); 
+                m_LocationTable[symbol] = loc;
+            }
         }
     }
     // align stack size to multiple of 16
@@ -24,7 +29,6 @@ void ASMGenerator::GenerateAssembly(const TACGenerator& generator)
     m_CodeGenerator.EmitOp(OpInstruction::MOV, RegisterArg(Register::RSP), RegisterArg(Register::RBP)); 
     if (stack_size > 0) m_CodeGenerator.EmitOp(OpInstruction::SUB, ImmediateArg(stack_size), RegisterArg(Register::RSP)); 
     TAC::ReturnStatement::Ref returnStatement = nullptr; 
-    auto statements = generator.GetStatements();
     for (size_t i = 0; i < statements.size(); i++)
     {
         auto statement = statements[i]; 
@@ -55,7 +59,7 @@ void ASMGenerator::GenerateAssembly(const TACGenerator& generator)
             {
                 auto assign = TAC::Statement::RefCast<TAC::AssignStatement>(statement);
                 auto src = FetchVarLocation(assign->rhs); 
-                auto dst = FetchVarLocation(assign->lhs->name); 
+                auto dst = FetchVarLocation(var_context, assign->lhs); 
                 if (IsPointer(src) && IsPointer(dst))
                 {
                     auto _reg = allocator.AllocRegister();
@@ -69,13 +73,13 @@ void ASMGenerator::GenerateAssembly(const TACGenerator& generator)
             case TAC::StatementType::Triple:
             {
                 auto triple = TAC::Statement::RefCast<TAC::TripleStatement>(statement);
-                GenerateTriple(triple); 
+                GenerateTriple(var_context, triple); 
                 break;
             }
             case TAC::StatementType::Quad:
             {
                 auto quad = TAC::Statement::RefCast<TAC::QuadStatement>(statement);
-                GenerateQuad(quad);
+                GenerateQuad(var_context, quad);
                 break;
             }
             case TAC::StatementType::Label:
@@ -89,11 +93,11 @@ void ASMGenerator::GenerateAssembly(const TACGenerator& generator)
                 goto end; 
         }
         // free temp registers
-        for (auto pair : m_SymbolTable)
+        for (auto pair : m_LocationTable)
         {
-            auto symbol = pair.second;
-            if (symbol.is_temp && symbol.range.end == i)
-                allocator.FreeRegister(m_LocationTable[pair.first]._register);
+            auto symbol = pair.first;
+            if (symbol->is_temp && symbol->range.end == i)
+                allocator.FreeRegister(m_LocationTable[symbol]._register);
         }
     }
     end:
@@ -113,66 +117,62 @@ void ASMGenerator::GenerateAssembly(const TACGenerator& generator)
     m_CodeGenerator.DecreaseIndentation();
 }
 
-void ASMGenerator::GenerateTriple(TAC::TripleStatement::Ref triple)
+void ASMGenerator::GenerateTriple(VarContext& var_context, TAC::TripleStatement::Ref triple)
 {
     auto op = triple->op; 
-    auto rhs = triple->rhs; 
-    auto result = triple->result; 
-    AllocIfTemp(result->name);
-    auto src = FetchVarLocation(rhs); 
-    auto dst = FetchVarLocation(result->name); 
+    AllocIfTemp(var_context, triple->dst);
+    
+    auto src = FetchVarLocation(triple->rhs); 
+    auto dst_loc = FetchVarLocation(var_context, triple->dst); 
     switch (op)
     {
         case TAC::OpCode::NEG:
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *src.get(), *dst.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::NEG, *dst.get()); 
+            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *src.get(), *dst_loc.get()); 
+            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::NEG, *dst_loc.get()); 
             break;
         case TAC::OpCode::NOT:
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *src.get(), *dst.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::NOT, *dst.get()); 
+            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *src.get(), *dst_loc.get()); 
+            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::NOT, *dst_loc.get()); 
             break;
         case TAC::OpCode::BOOL_NOT:
         {
             auto _reg = allocator.AllocRegister(); 
             auto lower_byte = RegisterUtility::get_lower_byte(_reg);
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *src.get(), *dst.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::CMP, ImmediateArg(0), *dst.get());
+            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *src.get(), *dst_loc.get()); 
+            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::CMP, ImmediateArg(0), *dst_loc.get());
             m_CodeGenerator.EmitOp(OpInstruction::SETE, RegisterArg(lower_byte));
             // sign-extend the lower byte
             m_CodeGenerator.EmitOp(OpInstruction::MOVZ, RegisterArg(lower_byte), RegisterArg(_reg)); 
-            m_CodeGenerator.EmitOp(OpInstruction::MOV, RegisterArg(_reg), dst);
+            m_CodeGenerator.EmitOp(OpInstruction::MOV, RegisterArg(_reg), dst_loc);
             allocator.FreeRegister(_reg); 
             break;
         }
     }
 }
 
-void ASMGenerator::GenerateQuad(TAC::QuadStatement::Ref quad)
+void ASMGenerator::GenerateQuad(VarContext& var_context, TAC::QuadStatement::Ref quad)
 {
     auto op = quad->op; 
-    auto lhs = quad->lhs; 
-    auto rhs = quad->rhs; 
-    auto result = quad->result; 
-    AllocIfTemp(result->name);
-    auto lhs_loc = FetchVarLocation(lhs);
-    auto rhs_loc = FetchVarLocation(rhs); 
-    auto dst = FetchVarLocation(result->name); 
+    AllocIfTemp(var_context, quad->dst);
+    auto lhs_loc = FetchVarLocation(quad->lhs);
+    auto rhs_loc = FetchVarLocation(quad->rhs); 
+    auto dst_loc = FetchVarLocation(var_context, quad->dst); 
     switch (op)
     {
         case TAC::OpCode::ADD:
-            if (!IsSameRegister(lhs_loc, dst))
-                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::ADD, *rhs_loc.get(), *dst.get()); 
+            if (!IsSameRegister(lhs_loc, dst_loc))
+                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst_loc.get()); 
+            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::ADD, *rhs_loc.get(), *dst_loc.get()); 
             break;
         case TAC::OpCode::SUB:
-            if (!IsSameRegister(lhs_loc, dst))
-                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::SUB, *rhs_loc.get(), *dst.get()); 
+            if (!IsSameRegister(lhs_loc, dst_loc))
+                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst_loc.get()); 
+            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::SUB, *rhs_loc.get(), *dst_loc.get()); 
             break;
         case TAC::OpCode::MUL:
-            if (!IsSameRegister(lhs_loc, dst))
-                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::IMUL, *rhs_loc.get(), *dst.get()); 
+            if (!IsSameRegister(lhs_loc, dst_loc))
+                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst_loc.get()); 
+            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::IMUL, *rhs_loc.get(), *dst_loc.get()); 
             break;
         case TAC::OpCode::DIV:
         case TAC::OpCode::MOD:
@@ -181,7 +181,7 @@ void ASMGenerator::GenerateQuad(TAC::QuadStatement::Ref quad)
             bool spilledEAX = false, spilledEDX = false;
             if (!allocator.IsRegisterFree(Register::EAX))
             {
-                if (!IsRegister(dst, Register::EAX) && !IsRegister(lhs_loc, Register::EAX) && !IsRegister(rhs_loc, Register::EAX))
+                if (!IsRegister(dst_loc, Register::EAX) && !IsRegister(lhs_loc, Register::EAX) && !IsRegister(rhs_loc, Register::EAX))
                 {
                     spilledEAX = true;
                     m_CodeGenerator.EmitOp(OpInstruction::PUSH, RegisterArg(Register::RAX));   
@@ -203,9 +203,9 @@ void ASMGenerator::GenerateQuad(TAC::QuadStatement::Ref quad)
                 allocator.FreeRegister(_reg);
             }
             m_CodeGenerator.EmitOp(OpInstruction::IDIV, rhs_loc); 
-            auto result_reg = op == TAC::OpCode::DIV ? Register::EAX : Register::EDX; 
-            if (!IsRegister(dst, Register::EAX)) 
-                m_CodeGenerator.EmitOp(OpInstruction::MOV, RegisterArg(result_reg), dst);
+            auto dst_reg = op == TAC::OpCode::DIV ? Register::EAX : Register::EDX; 
+            if (!IsRegister(dst_loc, Register::EAX)) 
+                m_CodeGenerator.EmitOp(OpInstruction::MOV, RegisterArg(dst_reg), dst_loc);
             if (spilledEAX) m_CodeGenerator.EmitOp(OpInstruction::POP, RegisterArg(Register::RAX));
             else allocator.FreeRegister(Register::EAX);
             if (spilledEDX) m_CodeGenerator.EmitOp(OpInstruction::POP, RegisterArg(Register::RDX)); 
@@ -213,29 +213,29 @@ void ASMGenerator::GenerateQuad(TAC::QuadStatement::Ref quad)
             break;
         }
         case TAC::OpCode::AND:
-            if (!IsSameRegister(lhs_loc, dst))
-                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::AND, *rhs_loc.get(), *dst.get()); 
+            if (!IsSameRegister(lhs_loc, dst_loc))
+                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst_loc.get()); 
+            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::AND, *rhs_loc.get(), *dst_loc.get()); 
             break;
         case TAC::OpCode::OR:
-            if (!IsSameRegister(lhs_loc, dst))
-                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::OR, *rhs_loc.get(), *dst.get()); 
+            if (!IsSameRegister(lhs_loc, dst_loc))
+                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst_loc.get()); 
+            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::OR, *rhs_loc.get(), *dst_loc.get()); 
             break;
         case TAC::OpCode::XOR:
-            if (!IsSameRegister(lhs_loc, dst))
-                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::XOR, *rhs_loc.get(), *dst.get()); 
+            if (!IsSameRegister(lhs_loc, dst_loc))
+                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst_loc.get()); 
+            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::XOR, *rhs_loc.get(), *dst_loc.get()); 
             break;
         case TAC::OpCode::LSH:
-            if (!IsSameRegister(lhs_loc, dst))
-                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::SAL, *rhs_loc.get(), *dst.get()); 
+            if (!IsSameRegister(lhs_loc, dst_loc))
+                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst_loc.get()); 
+            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::SAL, *rhs_loc.get(), *dst_loc.get()); 
             break;
         case TAC::OpCode::RSH:
-            if (!IsSameRegister(lhs_loc, dst))
-                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::SAR, *rhs_loc.get(), *dst.get()); 
+            if (!IsSameRegister(lhs_loc, dst_loc))
+                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst_loc.get()); 
+            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::SAR, *rhs_loc.get(), *dst_loc.get()); 
             break;
         case TAC::OpCode::EQL:
         case TAC::OpCode::NEQL:
@@ -269,7 +269,7 @@ void ASMGenerator::GenerateQuad(TAC::QuadStatement::Ref quad)
             m_CodeGenerator.EmitOp(comp, RegisterArg(lower_byte));
             // sign-extend lower byte
             m_CodeGenerator.EmitOp(OpInstruction::MOVZ, RegisterArg(lower_byte), RegisterArg(_reg)); 
-            m_CodeGenerator.EmitOp(OpInstruction::MOV, RegisterArg(_reg), dst);
+            m_CodeGenerator.EmitOp(OpInstruction::MOV, RegisterArg(_reg), dst_loc);
             allocator.FreeRegister(_reg); 
             break;
         }
