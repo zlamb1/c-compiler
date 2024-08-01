@@ -25,7 +25,7 @@ class RDParser : public Parser
 
         void PrintTree(AbstractSyntax::Ref ast) override
         {
-            if (ast)
+            if (ast != nullptr)
             {
                 std::cout << std::endl;
                 std::cout << "<--- Abstract Syntax Tree --->" << std::endl;
