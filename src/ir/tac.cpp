@@ -120,8 +120,12 @@ void TACGenerator::EvaluateSyntax(AbstractSyntax::Ref syntax)
             break;
         }
         case SyntaxType::StatementExpression:
-            EvaluateExpression(AbstractSyntax::RefCast<StatementExpression>(syntax)->expr); 
+        {
+            auto statement = AbstractSyntax::RefCast<StatementExpression>(syntax);
+            if (statement->expr != nullptr)
+                EvaluateExpression(statement->expr); 
             break;
+        }
         case SyntaxType::AssignmentOp:
         {
             auto rhs = EvaluateExpression(AbstractSyntax::RefCast<AssignmentOp>(syntax)->rvalue); 

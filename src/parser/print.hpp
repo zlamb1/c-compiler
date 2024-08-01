@@ -91,7 +91,7 @@ class ASTPrinter
                 PrintSyntax(statementExpr->expr);
                 m_OutputStream << ";\n";
             } 
-            else m_OutputStream << m_Spaces << "NULL STATEMENT;" << std::endl;
+            else m_OutputStream << m_Spaces << ";" << std::endl;
         }
 
         void PrintAssignmentOp(AssignmentOp::Ref op)
