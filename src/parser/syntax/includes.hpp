@@ -14,5 +14,6 @@
 #include "ret.hpp"
 #include "statement.hpp"
 #include "statement_expr.hpp"
+#include "ternary_op.hpp"
 #include "unary_op.hpp"
 #include "variable_ref.hpp"

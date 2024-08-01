@@ -189,4 +189,16 @@ namespace TAC
 
         typedef std::shared_ptr<ReturnStatement> Ref; 
     };
+    struct Function 
+    {
+        std::string function_name;
+        std::vector<Statement::Ref> statements{};
+        size_t label_counter = 0, temp_counter = 0; 
+
+        Function(const std::string& function_name) : function_name(function_name)
+        {
+        }
+
+        typedef std::shared_ptr<Function> Ref; 
+    };
 };

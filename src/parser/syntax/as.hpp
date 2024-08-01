@@ -18,6 +18,7 @@ enum class SyntaxType : int
     // Expressions
     UnaryOp,
     BinaryOp,
+    TernaryOp,
     IntConstant,
     VariableRef,
     Assignment

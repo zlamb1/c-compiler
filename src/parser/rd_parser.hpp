@@ -137,7 +137,7 @@ class RDParser : public Parser
             return block; 
         }
 
-        Conditional ParseConditional()
+        Conditional ParseIfCondition()
         {
             auto token = NextToken();
             if (token.kind != TokenKind::LeftParenthesis) ExceptParse("error: Expected '('", token);
@@ -149,7 +149,7 @@ class RDParser : public Parser
 
         IfStatement::Ref ParseIfStatement()
         {
-            auto statement = CreateRef<IfStatement>(ParseConditional()); 
+            auto statement = CreateRef<IfStatement>(ParseIfCondition()); 
             auto token = PeekToken(); 
             while (token.kind == TokenKind::Keyword && token.value == "else")
             {
@@ -158,7 +158,7 @@ class RDParser : public Parser
                 if (token.kind == TokenKind::Keyword && token.value == "if")
                 {
                     ConsumeToken(); 
-                    statement->else_ifs.emplace_back(ParseConditional()); 
+                    statement->else_ifs.emplace_back(ParseIfCondition()); 
                 } else
                 {
                     statement->else_statement = ParseStatement();  
@@ -199,7 +199,7 @@ class RDParser : public Parser
                         return CreateRef<Assignment>(lvalue, ParseExpression());
                     case TokenKind::Semicolon:
                         RevertToken(); 
-                        return ParseLogicalOrExpression();
+                        return ParseTernaryExpression();
                     default:
                         if (TOKEN_TO_ASSIGNMENT_OP_TYPE.find(token.kind) != TOKEN_TO_ASSIGNMENT_OP_TYPE.end())
                         {
@@ -207,9 +207,26 @@ class RDParser : public Parser
                             return CreateRef<AssignmentOp>(TOKEN_TO_ASSIGNMENT_OP_TYPE[token.kind], lvalue, ParseExpression()); 
                         }
                         RevertToken();
-                        return ParseLogicalOrExpression(); 
+                        return ParseTernaryExpression(); 
                 }
-            } else return ParseLogicalOrExpression(); 
+            } else return ParseTernaryExpression(); 
+        }
+
+        Expression::Ref ParseTernaryExpression()
+        {
+            auto expr = ParseLogicalOrExpression();
+            auto token = PeekToken();
+            if (token.kind == TokenKind::QuestionMark)
+            {
+                ConsumeToken();
+                auto lvalue = ParseExpression();
+                auto token = PeekToken(); 
+                if (token.kind != TokenKind::Colon) ExceptParse("error: Expected ':' for ternary expression", token);
+                ConsumeToken();
+                auto rvalue = ParseTernaryExpression();
+                return CreateRef<TernaryOp>(expr, lvalue, rvalue);
+            }
+            return expr; 
         }
 
         Expression::Ref ParseLogicalOrExpression()

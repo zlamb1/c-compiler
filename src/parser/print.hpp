@@ -49,6 +49,9 @@ class ASTPrinter
                 case SyntaxType::BinaryOp:
                     PrintBinaryOp(AbstractSyntax::RefCast<BinaryOp>(syntax));
                     break;
+                case SyntaxType::TernaryOp:
+                    PrintTernaryOp(AbstractSyntax::RefCast<TernaryOp>(syntax));
+                    break;
                 case SyntaxType::VariableRef:
                     PrintVariableRef(AbstractSyntax::RefCast<VariableRef>(syntax));
                     break;
@@ -231,6 +234,15 @@ class ASTPrinter
             }
             PrintSyntax(op->rvalue);
             m_OutputStream << ")";
+        }
+
+        void PrintTernaryOp(TernaryOp::Ref op)
+        {
+            PrintSyntax(op->condition);
+            m_OutputStream << " ? ";
+            PrintSyntax(op->lvalue);
+            m_OutputStream << " : ";
+            PrintSyntax(op->rvalue);
         }
 
         void PrintVariableRef(VariableRef::Ref ref)

@@ -12,6 +12,7 @@ enum class TokenKind : int
     RightParenthesis,
     LeftBrace,
     RightBrace,
+    Colon,
     Semicolon,
     Minus,
     Tilde,
@@ -47,6 +48,7 @@ enum class TokenKind : int
     AndEquals,
     CaretEquals,
     Comma,
+    QuestionMark,
 
     Comment,
     MultilineComment,
@@ -63,6 +65,7 @@ static std::unordered_map<TokenKind, std::string> TOKEN_KIND_NAMES
     { TokenKind::RightParenthesis,   ")"           },
     { TokenKind::LeftBrace,          "{"           },
     { TokenKind::RightBrace,         "}"           },
+    { TokenKind::Colon,              ":"           },
     { TokenKind::Semicolon,          ";"           },
     { TokenKind::Minus,              "-"           },
     { TokenKind::Tilde,              "~"           },
@@ -98,6 +101,7 @@ static std::unordered_map<TokenKind, std::string> TOKEN_KIND_NAMES
     { TokenKind::AndEquals,          "&="          },
     { TokenKind::CaretEquals,        "^="          },
     { TokenKind::Comma,              ","           },
+    { TokenKind::QuestionMark,       "?"           },
     { TokenKind::Comment,            "//"          },
     { TokenKind::None,               "None"        }
 };

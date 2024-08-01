@@ -202,6 +202,9 @@ Token Lexer::LexToken(StackString& str)
                 case '}':
                     token.kind = TokenKind::RightBrace;
                     break;
+                case ':':
+                    token.kind = TokenKind::Colon;
+                    break;
                 case ';':
                     token.kind = TokenKind::Semicolon;
                     break;
@@ -246,6 +249,9 @@ Token Lexer::LexToken(StackString& str)
                     break;
                 case ',':
                     token.kind = TokenKind::Comma;
+                    break;
+                case '?':
+                    token.kind = TokenKind::QuestionMark;
                     break;
             }
 
@@ -299,6 +305,7 @@ Token Lexer::LexToken(StackString& str)
                 case ')':
                 case '{':
                 case '}':
+                case ':':
                 case ';':
                 case '-':
                 case '~':
@@ -314,6 +321,7 @@ Token Lexer::LexToken(StackString& str)
                 case '%':
                 case '^': 
                 case ',':
+                case '?':
                     return token; 
             }
         }

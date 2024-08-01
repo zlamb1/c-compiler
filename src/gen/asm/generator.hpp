@@ -50,6 +50,7 @@ public:
     }
 
     void GenerateAssembly(TACGenerator& generator);
+    void GenerateFunction(VarContext& var_context, TAC::Function::Ref function);
     void GenerateTriple(VarContext& var_context, TAC::TripleStatement::Ref triple);
     void GenerateQuad(VarContext& var_context, TAC::QuadStatement::Ref quad); 
 

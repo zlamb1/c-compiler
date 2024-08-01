@@ -2,17 +2,33 @@
 
 void ASMGenerator::GenerateAssembly(TACGenerator& generator)
 {
-    auto statements = generator.GetStatements();
     auto var_context = generator.GetVarContext(); 
-    m_CodeGenerator.EmitFun("main"); 
+    for (auto function : generator.GetFunctions())
+    {
+        GenerateFunction(var_context, function);
+    }
+}
+
+void ASMGenerator::GenerateFunction(VarContext& var_context, TAC::Function::Ref function)
+{
+    auto statements = function->statements; 
+    m_CodeGenerator.EmitFun(function->function_name); 
     m_CodeGenerator.IncreaseIndentation(); 
     // calculate stack size
     for (auto statement : statements)
     {
-        if (statement->type() == TAC::StatementType::Assign)
+        VarSymbol::Ref symbol;
+        switch (statement->type())
         {
-            auto assign = TAC::Statement::RefCast<TAC::AssignStatement>(statement);
-            auto symbol = assign->lhs; 
+            case TAC::StatementType::Assign:
+            {
+                auto assign = TAC::Statement::RefCast<TAC::AssignStatement>(statement);
+                symbol = assign->lhs; 
+                break;
+            }
+        }
+        if (symbol != nullptr)
+        {
             if (!symbol->is_temp && m_LocationTable.find(symbol) == m_LocationTable.end())
             {
                 m_StackIndex -= symbol->byte_size;
@@ -28,7 +44,8 @@ void ASMGenerator::GenerateAssembly(TACGenerator& generator)
     m_CodeGenerator.EmitOp(OpInstruction::PUSH, RegisterArg(Register::RBP));
     m_CodeGenerator.EmitOp(OpInstruction::MOV, RegisterArg(Register::RSP), RegisterArg(Register::RBP)); 
     if (stack_size > 0) m_CodeGenerator.EmitOp(OpInstruction::SUB, ImmediateArg(stack_size), RegisterArg(Register::RSP)); 
-    TAC::ReturnStatement::Ref returnStatement = nullptr; 
+    const std::string ret_label = "L" + std::to_string(function->label_counter + 1); 
+    bool emit_ret_label = false, found_ret = false;
     for (size_t i = 0; i < statements.size(); i++)
     {
         auto statement = statements[i]; 
@@ -90,8 +107,21 @@ void ASMGenerator::GenerateAssembly(TACGenerator& generator)
                 break;
             }
             case TAC::StatementType::Return:
-                returnStatement = TAC::Statement::RefCast<TAC::ReturnStatement>(statement); 
-                goto end; 
+            {
+                auto return_statement = TAC::Statement::RefCast<TAC::ReturnStatement>(statement); 
+                auto ret_val = return_statement->ret_val;
+                auto src = FetchVarLocation(ret_val); 
+                    if (!IsRegister(src, Register::EAX))
+                        m_CodeGenerator.EmitOp(OpInstruction::MOV, src, RegisterArg(Register::EAX)); 
+                if (i == statements.size() - 1)
+                {
+                    found_ret = true;
+                } else {
+                    emit_ret_label = true;
+                    m_CodeGenerator.EmitOp(OpInstruction::JMP, LabelArg(ret_label));
+                }
+                break;
+            }
         }
         // free temp registers
         for (auto pair : m_LocationTable)
@@ -102,16 +132,12 @@ void ASMGenerator::GenerateAssembly(TACGenerator& generator)
         }
     }
     end:
-    // move ret val into EAX
-    if (returnStatement != nullptr)
-    {  
-        auto ret_val = returnStatement->ret_val;
-        auto src = FetchVarLocation(ret_val); 
-        if (!IsRegister(src, Register::EAX))
-            m_CodeGenerator.EmitOp(OpInstruction::MOV, src, RegisterArg(Register::EAX)); 
-    }
-    else m_CodeGenerator.EmitOp(OpInstruction::MOV, ImmediateArg(0), RegisterArg(Register::EAX)); 
+    // move zero into EAX if there is no ret
+    if (!found_ret)
+        m_CodeGenerator.EmitOp(OpInstruction::MOV, ImmediateArg(0), RegisterArg(Register::EAX));
     // generate function prologue
+    if (emit_ret_label)
+        m_CodeGenerator.EmitLabel(LabelArg(ret_label));
     m_CodeGenerator.EmitOp(OpInstruction::MOV, RegisterArg(Register::RBP), RegisterArg(Register::RSP)); 
     m_CodeGenerator.EmitOp(OpInstruction::POP, RegisterArg(Register::RBP));
     m_CodeGenerator.EmitOp(OpInstruction::RET); 
@@ -258,8 +284,8 @@ void ASMGenerator::GenerateQuad(VarContext& var_context, TAC::QuadStatement::Ref
             auto lower_byte = RegisterUtility::get_lower_byte(_reg);
             // swap sides to get proper comparisons
             std::swap(lhs_loc, rhs_loc);
-            // load rhs if immediate
-            if (IsImmediate(rhs_loc))
+            // load rhs if immediate or if both lhs and rhs are pointers
+            if (IsImmediate(rhs_loc) || (IsPointer(lhs_loc) && IsPointer(rhs_loc)))
             {
                 auto _reg = allocator.AllocRegister();
                 m_CodeGenerator.EmitOp(OpInstruction::MOV, rhs_loc, RegisterArg(_reg)); 
@@ -267,16 +293,16 @@ void ASMGenerator::GenerateQuad(VarContext& var_context, TAC::QuadStatement::Ref
                 allocator.FreeRegister(_reg);
             }
             m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::CMP, *lhs_loc.get(), *rhs_loc.get());
-            auto comp = OpInstruction::SETE;
+            auto set = OpInstruction::SETE;
             switch (op)
             {
-                case TAC::OpCode::NEQL: comp = OpInstruction::SETNE; break;
-                case TAC::OpCode::LT:   comp = OpInstruction::SETL;  break;
-                case TAC::OpCode::LTE:  comp = OpInstruction::SETLE; break;
-                case TAC::OpCode::GT:   comp = OpInstruction::SETG;  break;
-                case TAC::OpCode::GTE:  comp = OpInstruction::SETGE; break;
+                case TAC::OpCode::NEQL: set = OpInstruction::SETNE; break;
+                case TAC::OpCode::LT:   set = OpInstruction::SETL;  break;
+                case TAC::OpCode::LTE:  set = OpInstruction::SETLE; break;
+                case TAC::OpCode::GT:   set = OpInstruction::SETG;  break;
+                case TAC::OpCode::GTE:  set = OpInstruction::SETGE; break;
             }
-            m_CodeGenerator.EmitOp(comp, RegisterArg(lower_byte));
+            m_CodeGenerator.EmitOp(set, RegisterArg(lower_byte));
             // sign-extend lower byte
             m_CodeGenerator.EmitOp(OpInstruction::MOVZ, RegisterArg(lower_byte), RegisterArg(_reg)); 
             m_CodeGenerator.EmitOp(OpInstruction::MOV, RegisterArg(_reg), dst_loc);
