@@ -29,7 +29,7 @@ void TACGenerator::LogStatements() const
                 case TAC::StatementType::Condition:
                 {
                     auto cond = TAC::Statement::RefCast<TAC::ConditionStatement>(statement); 
-                    std::cout << prefix << "if (" << cond->condition->to_string() << " == " << cond->value << ") goto " << cond->goto_label << "\n";
+                    std::cout << prefix << "if (" << cond->condition->to_string() << " != " << cond->value << ") goto " << cond->goto_label << "\n";
                     break;
                 }
                 case TAC::StatementType::Assign:
@@ -144,11 +144,14 @@ void TACGenerator::EvaluateSyntax(AbstractSyntax::Ref syntax)
             break;
         }
         case SyntaxType::CompoundBlock:    
-            m_VarContext.push_scope();        
-            for (auto statement : AbstractSyntax::RefCast<CompoundBlock>(syntax)->statements)
+        {
+            auto block = AbstractSyntax::RefCast<CompoundBlock>(syntax); 
+            m_VarContext.push_scope(block->start_label, block->end_label);        
+            for (auto statement : block->statements)
                 EvaluateSyntax(statement);
             m_VarContext.pop_scope(); 
             break;
+        }
         case SyntaxType::IfStatement:
         {
             auto if_statement = AbstractSyntax::RefCast<IfStatement>(syntax);
@@ -156,7 +159,7 @@ void TACGenerator::EvaluateSyntax(AbstractSyntax::Ref syntax)
             auto if_label = CreateLabel(); 
             auto condition = EvaluateExpression(if_statement->if_conditional.condition);
             UpdateRange(condition);
-            AddStatement(CreateRef<TAC::ConditionStatement>(condition, if_label, 1));
+            AddStatement(CreateRef<TAC::ConditionStatement>(condition, if_label));
             size_t len = if_statement->else_ifs.size(); 
             std::vector<std::string> labels;
             for (size_t i = 0; i < len; i++)
@@ -187,11 +190,12 @@ void TACGenerator::EvaluateSyntax(AbstractSyntax::Ref syntax)
             auto start_label = CreateLabel(); 
             auto end_label = CreateLabel();
             AddStatement(CreateRef<TAC::LabelStatement>(start_label));
+            SetScopeLabels(while_statement->body, start_label, end_label);
             EvaluateSyntax(while_statement->body);
             auto condition = CreateTempVar(); 
             auto operand = CreateRef<TAC::Operand>(condition);
             EvaluateExpression(while_statement->condition, condition); 
-            AddStatement(CreateRef<TAC::ConditionStatement>(CreateRef<TAC::Operand>(condition), start_label, 1));
+            AddStatement(CreateRef<TAC::ConditionStatement>(CreateRef<TAC::Operand>(condition), start_label));
             AddStatement(CreateRef<TAC::LabelStatement>(end_label));
             break;
         }
@@ -204,7 +208,8 @@ void TACGenerator::EvaluateSyntax(AbstractSyntax::Ref syntax)
             auto operand = CreateRef<TAC::Operand>(condition); 
             AddStatement(CreateRef<TAC::LabelStatement>(start_label));
             EvaluateExpression(while_statement->condition, condition); 
-            AddStatement(CreateRef<TAC::ConditionStatement>(operand, end_label));
+            AddStatement(CreateRef<TAC::ConditionStatement>(operand, end_label, 1));
+            SetScopeLabels(while_statement->body, start_label, end_label);
             EvaluateSyntax(while_statement->body);
             AddStatement(CreateRef<TAC::GotoStatement>(start_label));
             AddStatement(CreateRef<TAC::LabelStatement>(end_label));
@@ -213,16 +218,18 @@ void TACGenerator::EvaluateSyntax(AbstractSyntax::Ref syntax)
         case SyntaxType::For:
         {
             auto for_statement = AbstractSyntax::RefCast<ForStatement>(syntax);
-            auto start_label = CreateLabel(); 
+            auto start_label = CreateLabel();
+            auto post_label = CreateLabel();  
             auto end_label = CreateLabel(); 
-            // push the for loop header scope
-            m_VarContext.push_scope();
+            // push loop header scope
+            m_VarContext.push_scope(post_label, end_label);
             EvaluateExpression(AbstractSyntax::RefCast<Expression>(for_statement->expression));
             AddStatement(CreateRef<TAC::LabelStatement>(start_label));
             auto condition = CreateTempVar(); 
             EvaluateExpression(for_statement->condition, condition); 
-            AddStatement(CreateRef<TAC::ConditionStatement>(CreateRef<TAC::Operand>(condition), end_label));
+            AddStatement(CreateRef<TAC::ConditionStatement>(CreateRef<TAC::Operand>(condition), end_label, 1));
             EvaluateSyntax(for_statement->body);
+            AddStatement(CreateRef<TAC::LabelStatement>(post_label));
             if (for_statement->post_expression != nullptr)
                 EvaluateExpression(AbstractSyntax::RefCast<Expression>(for_statement->post_expression));
             AddStatement(CreateRef<TAC::GotoStatement>(start_label));
@@ -234,15 +241,17 @@ void TACGenerator::EvaluateSyntax(AbstractSyntax::Ref syntax)
         {
             auto for_statement = AbstractSyntax::RefCast<ForDeclStatement>(syntax);
             auto start_label = CreateLabel(); 
+            auto post_label = CreateLabel();  
             auto end_label = CreateLabel(); 
-            // push the for loop header scope
-            m_VarContext.push_scope();
+            // push loop header scope
+            m_VarContext.push_scope(post_label, end_label);
             EvaluateSyntax(for_statement->declaration);
             AddStatement(CreateRef<TAC::LabelStatement>(start_label));
             auto condition = CreateTempVar(); 
             EvaluateExpression(for_statement->condition, condition); 
-            AddStatement(CreateRef<TAC::ConditionStatement>(CreateRef<TAC::Operand>(condition), end_label));
+            AddStatement(CreateRef<TAC::ConditionStatement>(CreateRef<TAC::Operand>(condition), end_label, 1));
             EvaluateSyntax(for_statement->body);
+            AddStatement(CreateRef<TAC::LabelStatement>(post_label));
             if (for_statement->post_expression != nullptr)
                 EvaluateExpression(AbstractSyntax::RefCast<Expression>(for_statement->post_expression));
             AddStatement(CreateRef<TAC::GotoStatement>(start_label));
@@ -250,6 +259,12 @@ void TACGenerator::EvaluateSyntax(AbstractSyntax::Ref syntax)
             m_VarContext.pop_scope();
             break;
         }
+        case SyntaxType::Break:
+            AddStatement(CreateRef<TAC::GotoStatement>(m_VarContext.get_end_label()));
+            break;
+        case SyntaxType::Continue:
+            AddStatement(CreateRef<TAC::GotoStatement>(m_VarContext.get_start_label()));
+            break;
         case SyntaxType::Return:
         {
             auto ref = EvaluateExpression(AbstractSyntax::RefCast<Return>(syntax)->expr); 
@@ -325,26 +340,25 @@ TAC::Operand::Ref TACGenerator::EvaluateExpression(AbstractSyntax::Ref syntax, V
                 case BinaryOpType::LogicalAnd:
                 case BinaryOpType::LogicalOr:
                 {
-                    auto short_circuit_op = op->OpType() == BinaryOpType::LogicalAnd ? TAC::OpCode::EQL : TAC::OpCode::NEQL;
-                    auto end = CreateLabel(); 
-                    auto set = CreateLabel(); 
-                    auto short_circuit_label = op->OpType() == BinaryOpType::LogicalAnd ? end : set; 
-                    auto precond = CreateTempVar(); 
-                    auto quad = CreateRef<TAC::QuadStatement>(short_circuit_op, 
-                        CreateRef<TAC::Operand>(CreateRef<IntConstant>(0)), lhs, precond); 
+                    auto set_label = CreateLabel(); 
+                    auto end_label = CreateLabel(); 
+                    auto condition = CreateTempVar(); 
+                    auto quad = CreateRef<TAC::QuadStatement>(TAC::OpCode::NEQL, 
+                        CreateRef<TAC::Operand>(CreateRef<IntConstant>(0)), lhs, condition); 
                     AddStatement(quad);
-                    AddStatement(CreateRef<TAC::ConditionStatement>(CreateRef<TAC::Operand>(precond), short_circuit_label));
+                    AddStatement(CreateRef<TAC::ConditionStatement>(CreateRef<TAC::Operand>(condition), set_label,
+                        op->OpType() == BinaryOpType::LogicalAnd ? 1 : 0));
                     auto rhs = CreateOperand(op->rvalue);
                     UpdateRange(rhs);
                     if (dst == nullptr) dst = CreateTempVar();
                     quad = CreateRef<TAC::QuadStatement>(TAC::OpCode::NEQL, 
                         CreateRef<TAC::Operand>(CreateRef<IntConstant>(0)), rhs, dst); 
                     AddStatement(quad);
-                    AddStatement(CreateRef<TAC::GotoStatement>(end));
-                    AddStatement(CreateRef<TAC::LabelStatement>(set));
+                    AddStatement(CreateRef<TAC::GotoStatement>(end_label));
+                    AddStatement(CreateRef<TAC::LabelStatement>(set_label));
                     AddStatement(CreateRef<TAC::AssignStatement>(dst, 
                         CreateRef<TAC::Operand>(CreateRef<IntConstant>(op->OpType() == BinaryOpType::LogicalAnd ? 0 : 1))));
-                    AddStatement(CreateRef<TAC::LabelStatement>(end));
+                    AddStatement(CreateRef<TAC::LabelStatement>(end_label));
                     return CreateRef<TAC::Operand>(dst); 
                 }
             }                

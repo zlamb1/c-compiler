@@ -40,6 +40,16 @@ protected:
         return m_Function->statements.size(); 
     }
 
+    inline void SetScopeLabels(AbstractSyntax::Ref syntax, const std::string& start_label, const std::string& end_label)
+    {
+        if (syntax->type() == SyntaxType::CompoundBlock)
+        {
+            auto block = AbstractSyntax::RefCast<CompoundBlock>(syntax);
+            block->start_label = start_label;
+            block->end_label = end_label;
+        }
+    }
+
     inline void AddStatement(TAC::Statement::Ref statement)
     {
         assert(m_Function);

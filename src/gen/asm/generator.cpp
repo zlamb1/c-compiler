@@ -78,7 +78,7 @@ void ASMGenerator::GenerateFunction(VarContext& var_context, TAC::Function::Ref 
                     allocator.FreeRegister(_reg); 
                 }
                 m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::CMP, ImmediateArg(cond_statement->value), *loc.get()); 
-                m_CodeGenerator.EmitOp(OpInstruction::JE, LabelArg(cond_statement->goto_label)); 
+                m_CodeGenerator.EmitOp(OpInstruction::JNE, LabelArg(cond_statement->goto_label)); 
                 break;
             }
             case TAC::StatementType::Assign:
@@ -277,7 +277,7 @@ void ASMGenerator::GenerateQuad(VarContext& var_context, TAC::QuadStatement::Ref
             }
             m_CodeGenerator.EmitOp(OpInstruction::IDIV, rhs_loc); 
             auto dst_reg = op == TAC::OpCode::DIV ? Register::EAX : Register::EDX; 
-            if (!IsRegister(dst_loc, Register::EAX)) 
+            if (!IsRegister(dst_loc, dst_reg)) 
                 m_CodeGenerator.EmitOp(OpInstruction::MOV, RegisterArg(dst_reg), dst_loc);
             if (spilledEAX) m_CodeGenerator.EmitOp(OpInstruction::POP, RegisterArg(Register::RAX));
             else allocator.FreeRegister(Register::EAX);

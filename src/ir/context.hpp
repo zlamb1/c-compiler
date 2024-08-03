@@ -7,7 +7,19 @@
 
 #include "symbol.hpp"
 
-typedef std::unordered_map<std::string, VarSymbol::Ref> Scope;
+struct Scope
+{
+    std::unordered_map<std::string, VarSymbol::Ref> symbols; 
+    std::string start_label, end_label;
+
+    Scope() : symbols()
+    {
+    }
+
+    Scope(const std::string& start_label, const std::string& end_label) : symbols(), start_label(start_label), end_label(end_label)
+    {
+    }
+};
 
 class VarContext
 {
@@ -23,6 +35,11 @@ public:
         scope_stack.emplace_back(Scope());
     }
 
+    void push_scope(const std::string& start_label, const std::string& end_label)
+    {
+        scope_stack.emplace_back(Scope(start_label, end_label));
+    }
+
     void pop_scope()
     {
         if (scope_stack.size() < 1)
@@ -34,9 +51,9 @@ public:
     {
         // check if var already exists in top scope
         auto scope = get_scope();
-        if (scope.find(var_name) != scope.end())
+        if (scope.symbols.find(var_name) != scope.symbols.end())
             throw std::runtime_error("error: Redeclaration of identifier '" + var_name + "'"); 
-        else get_scope()[var_name] = var_symbol;
+        else get_scope().symbols[var_name] = var_symbol;
     }
 
     VarSymbol::Ref get_var(const std::string& var_name)
@@ -45,8 +62,8 @@ public:
         for (size_t i = scope_stack.size() - 1; i < scope_stack.size(); i--)
         {
             auto scope = scope_stack[i];
-            if (scope.find(var_name) != scope.end())
-                return scope[var_name]; 
+            if (scope.symbols.find(var_name) != scope.symbols.end())
+                return scope.symbols[var_name]; 
         }
         // no variable found
         throw std::runtime_error("error: Undeclared identifier '" + var_name + "'"); 
@@ -71,13 +88,35 @@ public:
         return scope_stack[scope_stack.size() - 1]; 
     }
 
+    const std::string& get_start_label() const
+    {
+        for (size_t i = scope_stack.size() - 1; i < scope_stack.size(); i--)
+        {
+            auto& scope = scope_stack[i]; 
+            if (!scope.start_label.empty())
+                return scope.start_label;
+        }
+        throw std::runtime_error("error: continue statement not within loop");
+    }
+
+    const std::string& get_end_label() const
+    {
+        for (size_t i = scope_stack.size() - 1; i < scope_stack.size(); i--)
+        {
+            auto& scope = scope_stack[i]; 
+            if (!scope.end_label.empty())
+                return scope.end_label;
+        }
+        throw std::runtime_error("error: break statement not within loop or switch");
+    }
+
     bool any_scope_has_var(const std::string& var_name) const
     {
         // traverse vector in reverse
         for (size_t i = scope_stack.size() - 1; i >= 0; i--)
         {
             auto scope = scope_stack[i];
-            if (scope.find(var_name) != scope.end())
+            if (scope.symbols.find(var_name) != scope.symbols.end())
                 return true;
         }
         return false;
@@ -86,7 +125,7 @@ public:
     bool current_scope_has_var(const std::string& var_name) const
     {
         auto scope = get_scope();
-        return scope.find(var_name) != scope.end(); 
+        return scope.symbols.find(var_name) != scope.symbols.end(); 
     }
     
 private:

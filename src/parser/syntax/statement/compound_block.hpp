@@ -7,6 +7,7 @@
 struct CompoundBlock : public Statement
 {
     std::vector<Statement::Ref> statements; 
+    std::string start_label, end_label;
 
     CompoundBlock() : Statement(SyntaxType::CompoundBlock)
     {

@@ -199,6 +199,7 @@ class RDParser : public Parser
                 ConsumeToken();
                 auto declaration = ParseDeclaration(); 
                 auto condition = ParseNullExpression(); 
+                if (condition->type() == SyntaxType::Null) condition = CreateRef<IntConstant>(1);
                 auto token = NextToken();
                 if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'", token);
                 token = PeekToken();
@@ -218,6 +219,7 @@ class RDParser : public Parser
                 auto token = NextToken();
                 if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'", token);
                 auto condition = ParseNullExpression(); 
+                if (condition->type() == SyntaxType::Null) condition = CreateRef<IntConstant>(1);
                 token = NextToken();
                 if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'", token);
                 token = PeekToken();
