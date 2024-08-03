@@ -3,9 +3,9 @@
 AbstractSyntax::Ref RDParser::ParseFile(const std::string& filepath)
 {
     m_Tokens = m_Lexer->LexFile(filepath); 
-    std::cout << "<--- Lexical Analysis --." << std::endl;
+    /*std::cout << "<--- Lexical Analysis --." << std::endl;
     for (auto& token : m_Tokens)
-        std::cout << TOKEN_KIND_NAMES[token.kind] << ": " << (!token.value.empty() ? token.value : "NULL") << std::endl;
+        std::cout << TOKEN_KIND_NAMES[token.kind] << ": " << (!token.value.empty() ? token.value : "NULL") << std::endl;*/
     return ParseProgram(); 
 }
 
