@@ -32,6 +32,7 @@ private:
     DoWhileStatement::Ref ParseDoWhileStatement();
     Statement::Ref ParseForStatement();
     WhileStatement::Ref ParseWhileStatement();
+    Return::Ref ParseReturnStatement(); 
     Expression::Ref ParseNullExpression();
     Expression::Ref ParseExpression();
     Expression::Ref ParseAssignmentExpression();

@@ -32,9 +32,14 @@ void Parser::ExceptParse(const std::string& msg, const Token& current_token) con
 {
     std::string prefix = std::to_string(current_token.line) + ":" + std::to_string(current_token.position) + ": ";
     std::string unexpected = prefix + "Unexpected token: " + TOKEN_KIND_NAMES[current_token.kind];
-    if (current_token.kind == TokenKind::Keyword)
-        unexpected = prefix + "Unexpected keyword: " + current_token.value;
     throw std::runtime_error(unexpected + "\n" + prefix + msg);
+}
+
+void Parser::keyword(TokenKind kind)
+{
+    assert(is_keyword(kind));
+    auto token = NextToken();
+    if (token.kind != kind) ExceptParse("error: Expected keyword '" + TOKEN_KIND_NAMES[kind] + "'", token);
 }
 
 void Parser::colon()

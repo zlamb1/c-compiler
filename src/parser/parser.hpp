@@ -1,5 +1,6 @@
 #pragma once
 
+#include <assert.h>
 #include <exception>
 #include <memory>
 #include <ostream>
@@ -32,6 +33,7 @@ protected:
 
     void ExceptParse(const std::string& msg, const Token& current_token) const;
 
+    void keyword(TokenKind kind);
     void colon();
     void colon(const Token& token) const;
     void semicolon();

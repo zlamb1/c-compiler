@@ -3,9 +3,9 @@
 AbstractSyntax::Ref RDParser::ParseFile(const std::string& filepath)
 {
     m_Tokens = m_Lexer->LexFile(filepath); 
-    //std::cout << "<--- Lexical Analysis --." << std::endl;
-    //for (auto& token : m_Tokens)
-    //    std::cout << TOKEN_KIND_NAMES[token.kind] << ": " << (!token.value.empty() ? token.value : "NULL") << std::endl;
+    std::cout << "<--- Lexical Analysis --." << std::endl;
+    for (auto& token : m_Tokens)
+        std::cout << TOKEN_KIND_NAMES[token.kind] << ": " << (!token.value.empty() ? token.value : "NULL") << std::endl;
     return ParseProgram(); 
 }
 
@@ -22,7 +22,7 @@ Program::Ref RDParser::ParseProgram()
 Function::Ref RDParser::ParseFunction()
 {
     auto token = NextToken();
-    if (token.kind != TokenKind::Keyword || token.value != "int") ExceptParse("error: Invalid return type", token); 
+    if (token.kind != TokenKind::Int) ExceptParse("error: Invalid return type", token); 
     token = NextToken(); 
     if (token.kind != TokenKind::Identifier) ExceptParse("error: Excepted function identifier", token); 
     std::string name = token.value; 
@@ -35,7 +35,7 @@ Function::Ref RDParser::ParseFunction()
 Statement::Ref RDParser::ParseBlockItem()
 {
     auto token = PeekToken(); 
-    if (token.kind == TokenKind::Keyword && token.value == "int")
+    if (token.kind == TokenKind::Int)
     {
         ConsumeToken(); 
         return ParseDeclaration(); 
@@ -46,18 +46,26 @@ Statement::Ref RDParser::ParseStatement()
 {
     auto token = PeekToken(); 
     Statement::Ref statement; 
-    if (token.kind == TokenKind::Keyword)
+    switch (token.kind)
     {
-        ConsumeToken(); 
-        if (token.value == "return") statement = CreateRef<Return>(ParseExpression()); 
-        else if (token.value == "if") return ParseIfStatement(); 
-        else if (token.value == "while") return ParseWhileStatement(); 
-        else if (token.value == "for") return ParseForStatement();
-        else if (token.value == "do") statement = ParseDoWhileStatement(); 
-        else if (token.value == "break") statement = CreateRef<BreakStatement>();
-        else if (token.value == "continue") statement = CreateRef<ContinueStatement>();  
-    } else if (token.kind == TokenKind::LeftBrace) return ParseCompoundBlock(); 
-    else statement = CreateRef<StatementExpression>(ParseNullExpression());
+        case TokenKind::Return:    return ParseReturnStatement(); 
+        case TokenKind::LeftBrace: return ParseCompoundBlock(); 
+        case TokenKind::If:        return ParseIfStatement();
+        case TokenKind::While:     return ParseWhileStatement(); 
+        case TokenKind::For:       return ParseForStatement(); 
+        case TokenKind::Do:        return ParseDoWhileStatement();
+        case TokenKind::Break:
+            ConsumeToken();
+            statement = CreateRef<BreakStatement>();
+            break;
+        case TokenKind::Continue:
+            ConsumeToken();
+            statement = CreateRef<ContinueStatement>(); 
+            break;
+        default:                   
+            statement = CreateRef<StatementExpression>(ParseNullExpression()); 
+            break;
+    }
     semicolon();
     return statement; 
 }
@@ -118,13 +126,14 @@ Conditional RDParser::ParseIfCondition()
 
 IfStatement::Ref RDParser::ParseIfStatement()
 {
+    keyword(TokenKind::If);
     auto statement = CreateRef<IfStatement>(ParseIfCondition()); 
     auto token = PeekToken(); 
-    while (token.kind == TokenKind::Keyword && token.value == "else")
+    while (token.kind == TokenKind::Else)
     {
         ConsumeToken();
         token = PeekToken();
-        if (token.kind == TokenKind::Keyword && token.value == "if")
+        if (token.kind == TokenKind::If)
         {
             ConsumeToken(); 
             statement->else_ifs.emplace_back(ParseIfCondition()); 
@@ -139,21 +148,22 @@ IfStatement::Ref RDParser::ParseIfStatement()
 
 DoWhileStatement::Ref RDParser::ParseDoWhileStatement()
 {
+    keyword(TokenKind::Do);
     auto body = ParseStatement();
-    auto token = NextToken();
-    if (token.kind != TokenKind::Keyword || token.value != "while") 
-        ExceptParse("error: Expected keyword 'while'", token);
+    keyword(TokenKind::While);
     lparen();
     auto condition = ParseExpression();
     rparen();
+    semicolon();
     return CreateRef<DoWhileStatement>(body, condition); 
 }
 
 Statement::Ref RDParser::ParseForStatement()
 {
+    keyword(TokenKind::For); 
     lparen();
     auto token = PeekToken();
-    if (token.kind == TokenKind::Keyword && token.value == "int")
+    if (token.kind == TokenKind::Int)
     {
         ConsumeToken();
         auto declaration = ParseDeclaration(); 
@@ -193,11 +203,20 @@ Statement::Ref RDParser::ParseForStatement()
 
 WhileStatement::Ref RDParser::ParseWhileStatement()
 {
+    keyword(TokenKind::While);
     lparen();
     auto condition = ParseExpression(); 
     rparen();
     auto body = ParseStatement(); 
     return CreateRef<WhileStatement>(condition, body);
+}
+
+Return::Ref RDParser::ParseReturnStatement()
+{
+    keyword(TokenKind::Return);
+    auto return_statement = CreateRef<Return>(ParseExpression());
+    semicolon(); 
+    return return_statement;
 }
 
 Expression::Ref RDParser::ParseNullExpression()

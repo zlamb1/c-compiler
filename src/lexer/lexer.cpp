@@ -1,12 +1,19 @@
 #include "lexer.hpp"
 
-static inline Token check_keyword(Token& token)
+static Token& parse_keyword(Token& token)
 {
-    if (token.value == "int" || token.value == "if" || token.value == "else" || token.value == "return" ||
-        token.value == "for" || token.value == "while" || token.value == "do" || token.value == "break" ||
-        token.value == "continue")
-        token.kind = TokenKind::Keyword; 
-    return token; 
+    if (token.value == "int")      token.kind = TokenKind::Int;
+    if (token.value == "if")       token.kind = TokenKind::If;
+    if (token.value == "else")     token.kind = TokenKind::Else;
+    if (token.value == "do")       token.kind = TokenKind::Do;
+    if (token.value == "for")      token.kind = TokenKind::For;
+    if (token.value == "while")    token.kind = TokenKind::While;
+    if (token.value == "break")    token.kind = TokenKind::Break;
+    if (token.value == "continue") token.kind = TokenKind::Continue;
+    if (token.value == "return")   token.kind = TokenKind::Return;
+    if (token.kind != TokenKind::Identifier) 
+        token.value.clear();
+    return token;
 }
 
 const std::vector<Token>& Lexer::LexFile(const std::string& filepath)
@@ -270,7 +277,7 @@ Token Lexer::LexToken(StackString& str)
                 case TokenKind::Identifier:
                     if (is_nondigit(next_char) || is_digit(next_char))
                         token.value += next_char;
-                    else return check_keyword(token);
+                    else return parse_keyword(token); 
                     break; 
                 case TokenKind::IntConstant:
                     if (is_digit(next_char))
