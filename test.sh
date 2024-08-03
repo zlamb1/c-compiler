@@ -1,0 +1,2 @@
+./examples/exclude/test
+echo $?
