@@ -1,6 +1,6 @@
 #pragma once
 
-#include "as.hpp"
+#include "parser/syntax/as.hpp"
 
 struct Expression : public AbstractSyntax
 {

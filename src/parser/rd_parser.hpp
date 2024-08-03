@@ -37,9 +37,10 @@ class RDParser : public Parser
         void ExceptParse(const std::string& msg, const Token& current_token)
         {
             std::string prefix = std::to_string(current_token.line) + ":" + std::to_string(current_token.position) + ": ";
-            throw ParseException(
-                prefix + "Unexpected token: " + TOKEN_KIND_NAMES[current_token.kind] + "\n" + prefix + msg
-            ); 
+            std::string unexpected = prefix + "Unexpected token: " + TOKEN_KIND_NAMES[current_token.kind];
+            if (current_token.kind == TokenKind::Keyword)
+                unexpected = prefix + "Unexpected keyword: " + current_token.value;
+            throw ParseException(unexpected + "\n" + prefix + msg); 
         }
 
         Program::Ref ParseProgram()
@@ -81,12 +82,30 @@ class RDParser : public Parser
                 ConsumeToken(); 
                 if (token.value == "return") statement = CreateRef<Return>(ParseExpression()); 
                 else if (token.value == "if") return ParseIfStatement(); 
+                else if (token.value == "while") return ParseWhileStatement(); 
+                else if (token.value == "for") return ParseForStatement();
+                else if (token.value == "do") statement = ParseDoWhileStatement(); 
+                else if (token.value == "break") statement = CreateRef<BreakStatement>();
+                else if (token.value == "continue") statement = CreateRef<ContinueStatement>();  
             } else if (token.kind == TokenKind::LeftBrace) return ParseCompoundBlock(); 
-            else if (token.kind == TokenKind::Semicolon) statement = CreateRef<StatementExpression>(nullptr);  
-            else statement = CreateRef<StatementExpression>(ParseExpression());
+            else statement = CreateRef<StatementExpression>(ParseNullExpression());
             token = NextToken(); 
             if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'", token);
             return statement; 
+        }
+
+        Variable ParseVariable()
+        {
+            auto token = NextToken(); 
+            if (token.kind != TokenKind::Identifier) ExceptParse("error: Expected identifier", token); 
+            auto name = token.value; 
+            token = PeekToken(); 
+            if (token.kind == TokenKind::Equal)
+            {
+                ConsumeToken();
+                // the comma operator is applicable to declarations unless wrapped in parenthesis
+                return Variable(name, ParseAssignmentExpression()); 
+            } else return Variable(name, nullptr); 
         }
 
         Declaration::Ref ParseDeclaration()
@@ -105,20 +124,6 @@ class RDParser : public Parser
             token = NextToken(); 
             if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'", token);
             return decl;
-        }
-
-        Variable ParseVariable()
-        {
-            auto token = NextToken(); 
-            if (token.kind != TokenKind::Identifier) ExceptParse("error: Expected identifier", token); 
-            auto name = token.value; 
-            token = PeekToken(); 
-            if (token.kind == TokenKind::Equal)
-            {
-                ConsumeToken();
-                // the comma operator is not used for declarations unless wrapped in parenthesis
-                return Variable(name, ParseAssignmentExpression()); 
-            } else return Variable(name, nullptr); 
         }
 
         CompoundBlock::Ref ParseCompoundBlock()
@@ -159,14 +164,94 @@ class RDParser : public Parser
                 {
                     ConsumeToken(); 
                     statement->else_ifs.emplace_back(ParseIfCondition()); 
-                } else
-                {
+                } else {
                     statement->else_statement = ParseStatement();  
                     break;
                 }
                 token = PeekToken(); 
             }
             return statement; 
+        }
+
+        DoWhileStatement::Ref ParseDoWhileStatement()
+        {
+            auto body = ParseStatement();
+            auto token = NextToken();
+            if (token.kind != TokenKind::Keyword || token.value != "while") 
+                ExceptParse("error: Expected keyword 'while'", token);
+            token = NextToken();
+            if (token.kind != TokenKind::LeftParenthesis)
+                ExceptParse("error: Expected '('", token);
+            auto condition = ParseExpression();
+            token = NextToken();
+            if (token.kind != TokenKind::RightParenthesis)
+                ExceptParse("error: Expected ')'", token);
+            return CreateRef<DoWhileStatement>(body, condition); 
+        }
+
+        Statement::Ref ParseForStatement()
+        {
+            auto token = NextToken(); 
+            if (token.kind != TokenKind::LeftParenthesis) ExceptParse("error: Expected '('", token);
+            token = PeekToken();
+            if (token.kind == TokenKind::Keyword && token.value == "int")
+            {
+                ConsumeToken();
+                auto declaration = ParseDeclaration(); 
+                auto condition = ParseNullExpression(); 
+                auto token = NextToken();
+                if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'", token);
+                token = PeekToken();
+                Expression::Ref post_expression;
+                if (token.kind == TokenKind::RightParenthesis)
+                {
+                    ConsumeToken(); 
+                    post_expression = CreateRef<NullExpression>();
+                } else {
+                    post_expression = ParseExpression(); 
+                    token = NextToken();
+                    if (token.kind != TokenKind::RightParenthesis) ExceptParse("error: Expected ')'", token); 
+                }
+                return CreateRef<ForDeclStatement>(declaration, condition, post_expression, ParseStatement()); 
+            } else {
+                auto expression = ParseNullExpression(); 
+                auto token = NextToken();
+                if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'", token);
+                auto condition = ParseNullExpression(); 
+                token = NextToken();
+                if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'", token);
+                token = PeekToken();
+                Expression::Ref post_expression;
+                if (token.kind == TokenKind::RightParenthesis)
+                {
+                    ConsumeToken(); 
+                    post_expression = CreateRef<NullExpression>();
+                } else {
+                    post_expression = ParseExpression(); 
+                    token = NextToken();
+                    if (token.kind != TokenKind::RightParenthesis) ExceptParse("error: Expected ')'", token); 
+                }
+                return CreateRef<ForStatement>(expression, condition, post_expression, ParseStatement()); 
+            }
+        }
+
+        WhileStatement::Ref ParseWhileStatement()
+        {
+            auto token = NextToken();
+            if (token.kind != TokenKind::LeftParenthesis) ExceptParse("error: Expected '('", token);
+            auto condition = ParseExpression(); 
+            token = NextToken();
+            if (token.kind != TokenKind::RightParenthesis) ExceptParse("error: Expected ')'", token); 
+            auto body = ParseStatement(); 
+            return CreateRef<WhileStatement>(condition, body);
+        }
+
+        Expression::Ref ParseNullExpression()
+        {
+            auto token = PeekToken(); 
+            if (token.kind == TokenKind::Semicolon)
+                return CreateRef<NullExpression>(); 
+            else return ParseExpression(); 
         }
 
         Expression::Ref ParseExpression()

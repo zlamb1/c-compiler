@@ -26,15 +26,24 @@ void ASMGenerator::GenerateFunction(VarContext& var_context, TAC::Function::Ref 
                 symbol = assign->lhs; 
                 break;
             }
-        }
-        if (symbol != nullptr)
-        {
-            if (!symbol->is_temp && m_LocationTable.find(symbol) == m_LocationTable.end())
+            case TAC::StatementType::Triple:
             {
-                m_StackIndex -= symbol->byte_size;
-                auto loc = VarLocation(m_StackIndex); 
-                m_LocationTable[symbol] = loc;
+                auto triple = TAC::Statement::RefCast<TAC::TripleStatement>(statement);
+                symbol = triple->dst;
+                break;
             }
+            case TAC::StatementType::Quad:
+            {
+                auto quad = TAC::Statement::RefCast<TAC::QuadStatement>(statement);
+                symbol = quad->dst; 
+                break;
+            }
+        }
+        if (symbol != nullptr && !symbol->is_temp && m_LocationTable.find(symbol) == m_LocationTable.end())
+        {
+            m_StackIndex -= symbol->byte_size;
+            auto loc = VarLocation(m_StackIndex); 
+            m_LocationTable[symbol] = loc;
         }
     }
     // align stack size to multiple of 16
@@ -68,8 +77,8 @@ void ASMGenerator::GenerateFunction(VarContext& var_context, TAC::Function::Ref 
                     loc = CreateRef<RegisterArg>(_reg); 
                     allocator.FreeRegister(_reg); 
                 }
-                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::CMP, ImmediateArg(0), *loc.get()); 
-                m_CodeGenerator.EmitOp(OpInstruction::JNE, LabelArg(cond_statement->goto_label)); 
+                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::CMP, ImmediateArg(cond_statement->value), *loc.get()); 
+                m_CodeGenerator.EmitOp(OpInstruction::JE, LabelArg(cond_statement->goto_label)); 
                 break;
             }
             case TAC::StatementType::Assign:
@@ -186,15 +195,43 @@ void ASMGenerator::GenerateQuad(VarContext& var_context, TAC::QuadStatement::Ref
     switch (op)
     {
         case TAC::OpCode::ADD:
-            if (!IsSameRegister(lhs_loc, dst_loc))
-                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst_loc.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::ADD, *rhs_loc.get(), *dst_loc.get()); 
-            break;
         case TAC::OpCode::SUB:
+        case TAC::OpCode::AND:
+        case TAC::OpCode::OR:
+        case TAC::OpCode::XOR:
+        case TAC::OpCode::LSH:
+        case TAC::OpCode::RSH:
+        {
+            auto instruction = OpInstruction::ADD;
+            switch (op)
+            {
+                case TAC::OpCode::ADD: 
+                    instruction = OpInstruction::ADD; break;
+                case TAC::OpCode::SUB:
+                    instruction = OpInstruction::SUB; break;
+                case TAC::OpCode::AND:
+                    instruction = OpInstruction::AND; break;
+                case TAC::OpCode::OR:
+                    instruction = OpInstruction::OR;  break;
+                case TAC::OpCode::XOR:
+                    instruction = OpInstruction::XOR; break;
+                case TAC::OpCode::LSH:
+                    instruction = OpInstruction::SAL; break;
+                case TAC::OpCode::RSH:
+                    instruction = OpInstruction::SAR; break;
+            }
             if (!IsSameRegister(lhs_loc, dst_loc))
                 m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst_loc.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::SUB, *rhs_loc.get(), *dst_loc.get()); 
+            if (IsPointer(rhs_loc) && IsPointer(dst_loc))
+            {
+                auto _reg = allocator.AllocRegister();
+                m_CodeGenerator.EmitOp(OpInstruction::MOV, rhs_loc, RegisterArg(_reg));
+                rhs_loc = CreateRef<RegisterArg>(_reg); 
+                allocator.FreeRegister(_reg);
+            }
+            m_CodeGenerator.EmitOp<OperandSize::DWORD>(instruction, *rhs_loc.get(), *dst_loc.get()); 
             break;
+        }
         case TAC::OpCode::MUL:
             // dst operand of IMUL cannot be memory pointer
             if (dst_loc->type() == ArgType::Pointer)
@@ -248,31 +285,6 @@ void ASMGenerator::GenerateQuad(VarContext& var_context, TAC::QuadStatement::Ref
             else allocator.FreeRegister(Register::EDX); 
             break;
         }
-        case TAC::OpCode::AND:
-            if (!IsSameRegister(lhs_loc, dst_loc))
-                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst_loc.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::AND, *rhs_loc.get(), *dst_loc.get()); 
-            break;
-        case TAC::OpCode::OR:
-            if (!IsSameRegister(lhs_loc, dst_loc))
-                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst_loc.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::OR, *rhs_loc.get(), *dst_loc.get()); 
-            break;
-        case TAC::OpCode::XOR:
-            if (!IsSameRegister(lhs_loc, dst_loc))
-                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst_loc.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::XOR, *rhs_loc.get(), *dst_loc.get()); 
-            break;
-        case TAC::OpCode::LSH:
-            if (!IsSameRegister(lhs_loc, dst_loc))
-                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst_loc.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::SAL, *rhs_loc.get(), *dst_loc.get()); 
-            break;
-        case TAC::OpCode::RSH:
-            if (!IsSameRegister(lhs_loc, dst_loc))
-                m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::MOV, *lhs_loc.get(), *dst_loc.get()); 
-            m_CodeGenerator.EmitOp<OperandSize::DWORD>(OpInstruction::SAR, *rhs_loc.get(), *dst_loc.get()); 
-            break;
         case TAC::OpCode::EQL:
         case TAC::OpCode::NEQL:
         case TAC::OpCode::LT:

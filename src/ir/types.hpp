@@ -61,27 +61,44 @@ namespace TAC
     enum class OperandType : int
     {
         Constant,
-        Symbol
+        Symbol,
+        Label
     };
     class Operand
     {
     public:
-        std::variant<IntConstant::Ref, VarSymbol::Ref> member; 
+        std::variant<IntConstant::Ref, VarSymbol::Ref, std::string> member; 
+        
         Operand(IntConstant::Ref constant) : m_Type(OperandType::Constant), member(constant)
         {
         }
+
         Operand(VarSymbol::Ref var_symbol) : m_Type(OperandType::Symbol), member(var_symbol)
         {
         }
+
+        Operand(const std::string& label) : m_Type(OperandType::Label), member(label)
+        {
+        }
+
         std::string to_string()
         {
-            return m_Type == OperandType::Constant ? 
-                std::to_string(std::get<IntConstant::Ref>(member)->value) :
-                std::get<VarSymbol::Ref>(member)->var_name;
+            switch (m_Type)
+            {
+                case OperandType::Constant:
+                    return std::to_string(std::get<IntConstant::Ref>(member)->value);
+                case OperandType::Symbol:
+                    return std::get<VarSymbol::Ref>(member)->var_name;
+                case OperandType::Label:
+                    return std::get<std::string>(member);
+            }
         }
+
         int get_value() { return std::get<IntConstant::Ref>(member)->value; }
         VarSymbol::Ref get_symbol() { return std::get<VarSymbol::Ref>(member); }
+        const std::string& get_label() { return std::get<std::string>(member); }
         OperandType type() { return m_Type; }
+
         typedef std::shared_ptr<Operand> Ref; 
     private:
         OperandType m_Type; 
@@ -127,8 +144,14 @@ namespace TAC
     {
         Operand::Ref condition; 
         std::string goto_label; 
+        int value = 0;
 
         ConditionStatement(Operand::Ref condition, const std::string& goto_label) : Statement(StatementType::Condition), condition(condition), goto_label(goto_label)
+        {
+        }
+
+        ConditionStatement(Operand::Ref condition, const std::string& goto_label, int value) : 
+            Statement(StatementType::Condition), condition(condition), goto_label(goto_label), value(value)
         {
         }
 

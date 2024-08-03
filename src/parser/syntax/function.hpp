@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
-#include "statement.hpp"
-#include "compound_block.hpp"
+#include "statement/statement.hpp"
+#include "statement/compound_block.hpp"
 
 struct Function : public AbstractSyntax
 {

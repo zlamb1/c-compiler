@@ -25,6 +25,24 @@ class ASTPrinter
                 case SyntaxType::StatementExpression:
                     PrintStatementExpression(AbstractSyntax::RefCast<StatementExpression>(syntax));
                     break;
+                case SyntaxType::DoWhile:
+                    PrintDoWhileStatement(AbstractSyntax::RefCast<DoWhileStatement>(syntax));
+                    break;
+                case SyntaxType::While:
+                    PrintWhileStatement(AbstractSyntax::RefCast<WhileStatement>(syntax));
+                    break;
+                case SyntaxType::ForDecl:
+                    PrintForDeclStatement(AbstractSyntax::RefCast<ForDeclStatement>(syntax));
+                    break;
+                case SyntaxType::For:
+                    PrintForStatement(AbstractSyntax::RefCast<ForStatement>(syntax));
+                    break;
+                case SyntaxType::Break:
+                    PrintBreakStatement(AbstractSyntax::RefCast<BreakStatement>(syntax));
+                    break;
+                case SyntaxType::Continue:
+                    PrintContinueStatement(AbstractSyntax::RefCast<ContinueStatement>(syntax));
+                    break;
                 case SyntaxType::AssignmentOp:
                     PrintAssignmentOp(AbstractSyntax::RefCast<AssignmentOp>(syntax));
                     break;
@@ -94,6 +112,71 @@ class ASTPrinter
             else m_OutputStream << m_Spaces << ";" << std::endl;
         }
 
+        void PrintDoWhileStatement(DoWhileStatement::Ref do_while_statement)
+        {
+            m_OutputStream << m_Spaces;
+            m_OutputStream << "do\n";
+            if (do_while_statement->body->type() != SyntaxType::CompoundBlock)
+                m_OutputStream << std::string(m_IndentSize, ' ');
+            PrintSyntax(do_while_statement->body);
+            m_OutputStream << m_Spaces << "while (";
+            PrintSyntax(do_while_statement->condition);
+            m_OutputStream << ");\n";
+        }
+
+        void PrintWhileStatement(WhileStatement::Ref while_statement)
+        {
+            m_OutputStream << m_Spaces;
+            m_OutputStream << "while (";
+            PrintSyntax(while_statement->condition);
+            m_OutputStream << ")\n";
+            if (while_statement->body->type() != SyntaxType::CompoundBlock)
+                m_OutputStream << std::string(m_IndentSize, ' ');
+            PrintSyntax(while_statement->body);
+        }
+
+        void PrintForDeclStatement(ForDeclStatement::Ref for_decl_statement)
+        {
+            m_OutputStream << m_Spaces << "for (";
+            PrintDeclaration(for_decl_statement->declaration, false); 
+            m_OutputStream << " "; 
+            PrintSyntax(for_decl_statement->condition);
+            m_OutputStream << "; ";
+            PrintSyntax(for_decl_statement->post_expression);
+            m_OutputStream << ")\n";
+            if (for_decl_statement->body->type() != SyntaxType::CompoundBlock)
+                m_OutputStream << std::string(m_IndentSize, ' ');
+            PrintSyntax(for_decl_statement->body);
+        }
+
+        void PrintForStatement(ForStatement::Ref for_statement)
+        {
+            m_OutputStream << m_Spaces << "for (";
+            PrintSyntax(for_statement->expression); 
+            m_OutputStream << ";"; 
+            if (for_statement->condition->type() != SyntaxType::Null) 
+                m_OutputStream << " ";
+            PrintSyntax(for_statement->condition);
+            m_OutputStream << ";";
+            if (for_statement->post_expression->type() != SyntaxType::Null) 
+                m_OutputStream << " ";
+            PrintSyntax(for_statement->post_expression);
+            m_OutputStream << ")\n";
+            if (for_statement->body->type() != SyntaxType::CompoundBlock)
+                m_OutputStream << std::string(m_IndentSize, ' ');
+            PrintSyntax(for_statement->body);
+        }
+
+        void PrintBreakStatement(BreakStatement::Ref break_statement)
+        {
+            m_OutputStream << m_Spaces << "break;\n";
+        }
+
+        void PrintContinueStatement(ContinueStatement::Ref continue_statement)
+        {
+            m_OutputStream << m_Spaces << "continue;\n";
+        }
+
         void PrintAssignmentOp(AssignmentOp::Ref op)
         {
             m_OutputStream << op->lvalue << " "; 
@@ -114,10 +197,11 @@ class ASTPrinter
             PrintSyntax(op->rvalue);
         }
 
-        void PrintDeclaration(Declaration::Ref decl)
+        void PrintDeclaration(Declaration::Ref decl, bool use_space = true)
         {
             size_t num_vars = decl->variables.size(); 
-            m_OutputStream << m_Spaces << "int "; 
+            if (use_space) m_OutputStream << m_Spaces << "int "; 
+            else m_OutputStream << "int ";
             for (size_t i = 0; i < num_vars; i++)
             {
                 auto var = decl->variables[i]; 
@@ -129,7 +213,8 @@ class ASTPrinter
                 }
                 if (i != num_vars - 1) m_OutputStream << ", ";
             }
-            m_OutputStream << ";\n"; 
+            m_OutputStream << ";"; 
+            if (use_space) m_OutputStream << "\n";
         }
 
         void PrintCompoundBlock(CompoundBlock::Ref compoundBlock)
@@ -137,7 +222,7 @@ class ASTPrinter
             m_OutputStream << m_Spaces << "{\n";
             SetIndent(m_Indent + 1); 
             if (compoundBlock->statements.empty()) 
-                m_OutputStream << m_Spaces << "EMPTY BLOCK\n";
+                m_OutputStream << "\n";
             for (auto statement : compoundBlock->statements)
                 PrintSyntax(statement); 
             SetIndent(m_Indent - 1); 
@@ -151,33 +236,39 @@ class ASTPrinter
             PrintSyntax(statement); 
         }
 
-        void PrintIfStatement(IfStatement::Ref ifStatement)
+        void PrintIfStatement(IfStatement::Ref if_statement)
         {
             m_OutputStream << m_Spaces << "IF (";
-            PrintSyntax(ifStatement->if_conditional.condition); 
+            PrintSyntax(if_statement->if_conditional.condition); 
             m_OutputStream << ")\n";
-            PrintBlockItem(ifStatement->if_conditional.statement);
-            for (auto else_if : ifStatement->else_ifs)
+            if (if_statement->if_conditional.statement->type() != SyntaxType::CompoundBlock)
+                m_OutputStream << std::string(m_IndentSize, ' ');
+            PrintBlockItem(if_statement->if_conditional.statement);
+            for (auto else_if : if_statement->else_ifs)
             {
                 m_OutputStream << m_Spaces << "ELSE IF (";
                 PrintSyntax(else_if.condition); 
                 m_OutputStream << ")\n"; 
+                if (else_if.statement->type() != SyntaxType::CompoundBlock)
+                    m_OutputStream << std::string(m_IndentSize, ' ');
                 PrintBlockItem(else_if.statement); 
             }
-            if (ifStatement->else_statement != nullptr)
+            if (if_statement->else_statement != nullptr)
             {
                 m_OutputStream << m_Spaces << "ELSE\n";
-                PrintBlockItem(ifStatement->else_statement); 
+                if (if_statement->else_statement->type() != SyntaxType::CompoundBlock)
+                    m_OutputStream << std::string(m_IndentSize, ' ');
+                PrintBlockItem(if_statement->else_statement); 
             }
         }
 
         void PrintReturn(Return::Ref ret)
         {
-            m_OutputStream << m_Spaces << "Return(";
+            m_OutputStream << m_Spaces << "return ";
             SetIndent(m_Indent + 1);  
             PrintSyntax(ret->expr);
             SetIndent(m_Indent - 1); 
-            m_OutputStream << ");\n";
+            m_OutputStream << ";\n";
         }
 
         void PrintIntConstant(IntConstant::Ref constant)
@@ -208,8 +299,8 @@ class ASTPrinter
 
         void PrintBinaryOp(BinaryOp::Ref op)
         {
-            m_OutputStream << "(";
             PrintSyntax(op->lvalue);
+            m_OutputStream << " ";
             switch (op->OpType())
             {
                 case BinaryOpType::Addition:           m_OutputStream << "+";  break;
@@ -232,8 +323,8 @@ class ASTPrinter
                 case BinaryOpType::BitwiseRightShift:  m_OutputStream << ">>"; break; 
                 case BinaryOpType::Comma:              m_OutputStream << ",";  break;
             }
+            m_OutputStream << " ";
             PrintSyntax(op->rvalue);
-            m_OutputStream << ")";
         }
 
         void PrintTernaryOp(TernaryOp::Ref op)

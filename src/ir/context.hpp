@@ -42,7 +42,7 @@ public:
     VarSymbol::Ref get_var(const std::string& var_name)
     {
         // traverse vector in reverse
-        for (size_t i = scope_stack.size() - 1; i >= 0; i--)
+        for (size_t i = scope_stack.size() - 1; i < scope_stack.size(); i--)
         {
             auto scope = scope_stack[i];
             if (scope.find(var_name) != scope.end())

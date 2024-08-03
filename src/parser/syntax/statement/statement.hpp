@@ -2,8 +2,8 @@
 
 #include <vector>
 
-#include "as.hpp"
-#include "expr.hpp"
+#include "parser/syntax/as.hpp"
+#include "parser/syntax/expression/expression.hpp"
 
 struct Statement : public AbstractSyntax
 {

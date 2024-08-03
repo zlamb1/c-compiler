@@ -21,7 +21,15 @@ enum class SyntaxType : int
     TernaryOp,
     IntConstant,
     VariableRef,
-    Assignment
+    Assignment,
+    Null,
+    // Loop
+    For,
+    ForDecl,
+    DoWhile,
+    While,
+    Break,
+    Continue,
 };
 
 class AbstractSyntax

@@ -28,33 +28,30 @@ namespace
 
     static std::optional<int> get_value(Expression::Ref expr)
     {
-        if (expr != nullptr)
+        switch (expr->type())
         {
-            switch (expr->type())
+            case SyntaxType::IntConstant:
+                return AbstractSyntax::RefCast<IntConstant>(expr)->value;
+            case SyntaxType::VariableRef:
             {
-                case SyntaxType::IntConstant:
-                    return AbstractSyntax::RefCast<IntConstant>(expr)->value;
-                case SyntaxType::VariableRef:
-                {
-                    auto var = AbstractSyntax::RefCast<VariableRef>(expr);
-                    if (variable_exists(var->name));
-                        return variables[var->name]; 
-                    break;
-                }
-                case SyntaxType::BinaryOp:
-                {
-                    auto op = AbstractSyntax::RefCast<BinaryOp>(expr); 
-                    if (op->OpType() == BinaryOpType::Comma)
-                        return get_value(op->rvalue); 
-                    break;
-                }
-                case SyntaxType::Assignment:
-                {
-                    auto assign = AbstractSyntax::RefCast<Assignment>(expr); 
-                    if (variable_exists(assign->lvalue));
-                        return variables[assign->lvalue]; 
-                    break;
-                }
+                auto var = AbstractSyntax::RefCast<VariableRef>(expr);
+                if (variable_exists(var->name));
+                    return variables[var->name]; 
+                break;
+            }
+            case SyntaxType::BinaryOp:
+            {
+                auto op = AbstractSyntax::RefCast<BinaryOp>(expr); 
+                if (op->OpType() == BinaryOpType::Comma)
+                    return get_value(op->rvalue); 
+                break;
+            }
+            case SyntaxType::Assignment:
+            {
+                auto assign = AbstractSyntax::RefCast<Assignment>(expr); 
+                if (variable_exists(assign->lvalue));
+                    return variables[assign->lvalue]; 
+                break;
             }
         }
         return std::nullopt; 
