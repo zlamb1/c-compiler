@@ -42,34 +42,6 @@ Statement::Ref RDParser::ParseBlockItem()
     } else return ParseStatement(); 
 }
 
-Statement::Ref RDParser::ParseStatement()
-{
-    auto token = PeekToken(); 
-    Statement::Ref statement; 
-    switch (token.kind)
-    {
-        case TokenKind::Return:    return ParseReturnStatement(); 
-        case TokenKind::LeftBrace: return ParseCompoundBlock(); 
-        case TokenKind::If:        return ParseIfStatement();
-        case TokenKind::While:     return ParseWhileStatement(); 
-        case TokenKind::For:       return ParseForStatement(); 
-        case TokenKind::Do:        return ParseDoWhileStatement();
-        case TokenKind::Break:
-            ConsumeToken();
-            statement = CreateRef<BreakStatement>();
-            break;
-        case TokenKind::Continue:
-            ConsumeToken();
-            statement = CreateRef<ContinueStatement>(); 
-            break;
-        default:                   
-            statement = CreateRef<StatementExpression>(ParseNullExpression()); 
-            break;
-    }
-    semicolon();
-    return statement; 
-}
-
 Variable RDParser::ParseVariable()
 {
     auto token = NextToken(); 
@@ -99,6 +71,28 @@ Declaration::Ref RDParser::ParseDeclaration()
     }
     semicolon();
     return decl;
+}
+
+Statement::Ref RDParser::ParseStatement()
+{
+    auto token = PeekToken(); 
+    Statement::Ref statement; 
+    switch (token.kind)
+    {
+        case TokenKind::Return:    return ParseReturnStatement(); 
+        case TokenKind::LeftBrace: return ParseCompoundBlock(); 
+        case TokenKind::If:        return ParseIfStatement();
+        case TokenKind::While:     return ParseWhileStatement(); 
+        case TokenKind::For:       return ParseForStatement(); 
+        case TokenKind::Do:        return ParseDoWhileStatement();
+        case TokenKind::Break:     return ParseBreakStatement();
+        case TokenKind::Continue:  return ParseContinueStatement();
+        default:                   
+            statement = CreateRef<StatementExpression>(ParseNullExpression()); 
+            break;
+    }
+    semicolon();
+    return statement; 
 }
 
 CompoundBlock::Ref RDParser::ParseCompoundBlock()
@@ -211,10 +205,24 @@ WhileStatement::Ref RDParser::ParseWhileStatement()
     return CreateRef<WhileStatement>(condition, body);
 }
 
-Return::Ref RDParser::ParseReturnStatement()
+BreakStatement::Ref RDParser::ParseBreakStatement()
+{
+    keyword(TokenKind::Break);
+    semicolon();
+    return CreateRef<BreakStatement>(); 
+}
+
+ContinueStatement::Ref RDParser::ParseContinueStatement()
+{
+    keyword(TokenKind::Continue);
+    semicolon();
+    return CreateRef<ContinueStatement>(); 
+}
+
+ReturnStatement::Ref RDParser::ParseReturnStatement()
 {
     keyword(TokenKind::Return);
-    auto return_statement = CreateRef<Return>(ParseExpression());
+    auto return_statement = CreateRef<ReturnStatement>(ParseExpression());
     semicolon(); 
     return return_statement;
 }

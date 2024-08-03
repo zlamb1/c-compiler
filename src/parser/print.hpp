@@ -56,7 +56,7 @@ class ASTPrinter
                     PrintIfStatement(AbstractSyntax::RefCast<IfStatement>(syntax));
                     break;
                 case SyntaxType::Return:
-                    PrintReturn(AbstractSyntax::RefCast<Return>(syntax));
+                    PrintReturn(AbstractSyntax::RefCast<ReturnStatement>(syntax));
                     break;
                 case SyntaxType::IntConstant:
                     PrintIntConstant(AbstractSyntax::RefCast<IntConstant>(syntax));
@@ -101,15 +101,11 @@ class ASTPrinter
             m_OutputStream << m_Spaces << ")" << std::endl;
         }
 
-        void PrintStatementExpression(StatementExpression::Ref statementExpr)
+        void PrintStatementExpression(StatementExpression::Ref statement_expression)
         {
-            if (statementExpr->expr)
-            {
-                m_OutputStream << m_Spaces;
-                PrintSyntax(statementExpr->expr);
-                m_OutputStream << ";\n";
-            } 
-            else m_OutputStream << m_Spaces << ";" << std::endl;
+            m_OutputStream << m_Spaces;
+            PrintSyntax(statement_expression->expression);
+            m_OutputStream << ";\n";
         }
 
         void PrintDoWhileStatement(DoWhileStatement::Ref do_while_statement)
@@ -206,10 +202,10 @@ class ASTPrinter
             {
                 auto var = decl->variables[i]; 
                 m_OutputStream << var.name; 
-                if (var.expr)
+                if (var.expression)
                 {
                     m_OutputStream << " = ";
-                    PrintSyntax(var.expr);
+                    PrintSyntax(var.expression);
                 }
                 if (i != num_vars - 1) m_OutputStream << ", ";
             }
@@ -262,11 +258,11 @@ class ASTPrinter
             }
         }
 
-        void PrintReturn(Return::Ref ret)
+        void PrintReturn(ReturnStatement::Ref return_statement)
         {
             m_OutputStream << m_Spaces << "return ";
             SetIndent(m_Indent + 1);  
-            PrintSyntax(ret->expr);
+            PrintSyntax(return_statement->expression);
             SetIndent(m_Indent - 1); 
             m_OutputStream << ";\n";
         }

@@ -236,20 +236,20 @@ namespace
             }
             case SyntaxType::StatementExpression:
             {
-                auto statementExpr = AbstractSyntax::RefCast<StatementExpression>(syntax);
-                statementExpr->expr = FoldConstants(statementExpr->expr);
+                auto statement_expression = AbstractSyntax::RefCast<StatementExpression>(syntax);
+                statement_expression->expression = FoldConstants(statement_expression->expression);
                 break;
             }
             case SyntaxType::Declaration:
             {
-                auto decl = AbstractSyntax::RefCast<Declaration>(syntax);
-                for (auto var : decl->variables)
+                auto declaration = AbstractSyntax::RefCast<Declaration>(syntax);
+                for (auto var : declaration->variables)
                 {
-                    if (var.expr == nullptr) variables[var.name] = 0; 
+                    if (var.expression == nullptr) variables[var.name] = 0; 
                     else 
                     {
-                        var.expr = FoldConstants(var.expr); 
-                        auto constant = get_value(var.expr);
+                        var.expression = FoldConstants(var.expression); 
+                        auto constant = get_value(var.expression);
                         if (constant) 
                             variables[var.name] = constant.value(); 
                     }
@@ -258,8 +258,8 @@ namespace
             }
             case SyntaxType::Return:
             {
-                auto ret = AbstractSyntax::RefCast<Return>(syntax); 
-                ret->expr = FoldConstants(ret->expr);
+                auto return_statement = AbstractSyntax::RefCast<ReturnStatement>(syntax); 
+                return_statement->expression = FoldConstants(return_statement->expression);
                 break; 
             }
         }

@@ -4,9 +4,9 @@
 
 struct StatementExpression : public Statement
 {
-    Expression::Ref expr; 
+    Expression::Ref expression; 
 
-    StatementExpression(Expression::Ref expr) : Statement(SyntaxType::StatementExpression), expr(expr)
+    StatementExpression(Expression::Ref expression) : Statement(SyntaxType::StatementExpression), expression(expression)
     {
     }
 

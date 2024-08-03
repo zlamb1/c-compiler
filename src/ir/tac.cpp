@@ -119,8 +119,8 @@ void TACGenerator::EvaluateSyntax(AbstractSyntax::Ref syntax)
         }
         case SyntaxType::StatementExpression:
         {
-            auto statement = AbstractSyntax::RefCast<StatementExpression>(syntax);
-            EvaluateExpression(statement->expr); 
+            auto statement_expression = AbstractSyntax::RefCast<StatementExpression>(syntax);
+            EvaluateExpression(statement_expression->expression); 
             break;
         }
         case SyntaxType::AssignmentOp:
@@ -137,7 +137,7 @@ void TACGenerator::EvaluateSyntax(AbstractSyntax::Ref syntax)
                     throw std::runtime_error("error: Redeclaration of identifier '" + var.name + "'");
                 auto lhs = CreateRef<VarSymbol>(var.name, 4);   
                 m_VarContext.add_var(var.name, lhs); 
-                auto rhs = var.expr ? EvaluateExpression(var.expr, lhs) : 
+                auto rhs = var.expression ? EvaluateExpression(var.expression, lhs) : 
                     CreateRef<TAC::Operand>(CreateRef<IntConstant>(0)); 
                 lhs->range = VarRange(GetStatementsSize() - 1);
             }
@@ -267,7 +267,7 @@ void TACGenerator::EvaluateSyntax(AbstractSyntax::Ref syntax)
             break;
         case SyntaxType::Return:
         {
-            auto ref = EvaluateExpression(AbstractSyntax::RefCast<Return>(syntax)->expr); 
+            auto ref = EvaluateExpression(AbstractSyntax::RefCast<ReturnStatement>(syntax)->expression); 
             auto ret = CreateRef<TAC::ReturnStatement>(ref);
             AddStatement(ret);  
             break;

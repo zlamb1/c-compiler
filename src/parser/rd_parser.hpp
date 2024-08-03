@@ -23,16 +23,21 @@ private:
     Program::Ref ParseProgram();
     Function::Ref ParseFunction();
     Statement::Ref ParseBlockItem();
-    Statement::Ref ParseStatement();
+    
     Variable ParseVariable();
     Declaration::Ref ParseDeclaration();
+
+    Statement::Ref ParseStatement();
     CompoundBlock::Ref ParseCompoundBlock();
     Conditional ParseIfCondition();
     IfStatement::Ref ParseIfStatement();
     DoWhileStatement::Ref ParseDoWhileStatement();
     Statement::Ref ParseForStatement();
     WhileStatement::Ref ParseWhileStatement();
-    Return::Ref ParseReturnStatement(); 
+    BreakStatement::Ref ParseBreakStatement(); 
+    ContinueStatement::Ref ParseContinueStatement();
+    ReturnStatement::Ref ParseReturnStatement(); 
+
     Expression::Ref ParseNullExpression();
     Expression::Ref ParseExpression();
     Expression::Ref ParseAssignmentExpression();

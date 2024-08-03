@@ -5,9 +5,9 @@
 struct Variable
 {
     std::string name; 
-    Expression::Ref expr; 
+    Expression::Ref expression; 
 
-    Variable(const std::string& name, Expression::Ref expr) : name(name), expr(expr)
+    Variable(const std::string& name, Expression::Ref expression) : name(name), expression(expression)
     {
     }
 };

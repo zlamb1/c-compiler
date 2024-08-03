@@ -1,6 +1,6 @@
 #pragma once
 
-#include "parser/syntax/statement/decl.hpp"
+#include "parser/syntax/statement/declaration.hpp"
 #include "parser/syntax/statement/statement.hpp"
 #include "parser/syntax/statement/statement_expr.hpp"
 
