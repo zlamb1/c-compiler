@@ -1,8 +1,7 @@
 #pragma once
 
 #include "lexer/token_kind.hpp"
-#include "syntax/expression/expression.hpp"
-#include "syntax/expression/assignment_op.hpp"
+#include "syntax/includes.hpp"
 
 static std::unordered_map<TokenKind, UnaryOpType> TOKEN_TO_UNARY_TYPE
 {

@@ -359,11 +359,11 @@ class ASTPrinter
         }
 };
 
-static void PrettyPrintAST(AbstractSyntax::Ref ast)
+static void print_ast(std::ostream& out, const AbstractSyntax::Ref root)
 {
-    if (ast != nullptr)
+    if (root != nullptr)
     {
-        ASTPrinter printer(std::cout); 
-        printer.PrintSyntax(ast); 
-    } else std::cout << "The abstract syntax tree is null!" << std::endl; 
+        ASTPrinter printer(out); 
+        printer.PrintSyntax(root); 
+    } else out << "NULL" << std::endl; 
 }

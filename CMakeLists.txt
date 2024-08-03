@@ -10,7 +10,10 @@ add_executable(${CMAKE_PROJECT_NAME} src/main.cpp
     src/gen/asm/generator.cpp 
     src/ir/tac.cpp
     src/lexer/lexer.cpp 
-    src/lexer/stack_str.cpp)
+    src/lexer/stack_str.cpp
+    src/parser/parser.cpp
+    src/parser/rd_parser.cpp
+)
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE src)
 

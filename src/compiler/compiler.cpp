@@ -38,9 +38,9 @@ void Compiler::CompileProgram()
         }
         // constant folding
         //OptimizeTree(ast);
-        m_Parser->PrintTree(ast); 
+        m_Parser->LogTree(std::cout, ast); 
         m_CompilerBackend->GenerateCode(m_Flags, ast); 
-    } catch (ParseException exc)
+    } catch (const std::exception& exc)
     {
         std::cout << exc.what() << std::endl;
     }
