@@ -34,15 +34,6 @@ class RDParser : public Parser
         }
 
     private:
-        void ExceptParse(const std::string& msg, const Token& current_token)
-        {
-            std::string prefix = std::to_string(current_token.line) + ":" + std::to_string(current_token.position) + ": ";
-            std::string unexpected = prefix + "Unexpected token: " + TOKEN_KIND_NAMES[current_token.kind];
-            if (current_token.kind == TokenKind::Keyword)
-                unexpected = prefix + "Unexpected keyword: " + current_token.value;
-            throw ParseException(unexpected + "\n" + prefix + msg); 
-        }
-
         Program::Ref ParseProgram()
         {
             return CreateRef<Program>(ParseFunction()); 
@@ -55,10 +46,8 @@ class RDParser : public Parser
             token = NextToken(); 
             if (token.kind != TokenKind::Identifier) ExceptParse("error: Excepted function identifier", token); 
             std::string name = token.value; 
-            token = NextToken(); 
-            if (token.kind != TokenKind::LeftParenthesis) ExceptParse("error: Expected '('", token); 
-            token = NextToken(); 
-            if (token.kind != TokenKind::RightParenthesis) ExceptParse("error: Expected ')'", token); 
+            lparen();
+            rparen();
             return CreateRef<Function>(name, ParseCompoundBlock());
         }
 
@@ -89,8 +78,7 @@ class RDParser : public Parser
                 else if (token.value == "continue") statement = CreateRef<ContinueStatement>();  
             } else if (token.kind == TokenKind::LeftBrace) return ParseCompoundBlock(); 
             else statement = CreateRef<StatementExpression>(ParseNullExpression());
-            token = NextToken(); 
-            if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'", token);
+            semicolon();
             return statement; 
         }
 
@@ -121,17 +109,15 @@ class RDParser : public Parser
                 decl->variables.emplace_back(ParseVariable()); 
                 token = PeekToken(); 
             }
-            token = NextToken(); 
-            if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'", token);
+            semicolon();
             return decl;
         }
 
         CompoundBlock::Ref ParseCompoundBlock()
         {
-            auto token = NextToken();
-            if (token.kind != TokenKind::LeftBrace) ExceptParse("error: expected '{'", token);
+            lbrace();
             auto block = CreateRef<CompoundBlock>(); 
-            token = PeekToken(); 
+            auto token = PeekToken(); 
             while (token.kind != TokenKind::RightBrace)
             {
                 if (token.kind == TokenKind::None) ExceptParse("error: expected '}'", token);
@@ -144,11 +130,9 @@ class RDParser : public Parser
 
         Conditional ParseIfCondition()
         {
-            auto token = NextToken();
-            if (token.kind != TokenKind::LeftParenthesis) ExceptParse("error: Expected '('", token);
+            lparen();
             auto condition = ParseExpression(); 
-            token = NextToken();
-            if (token.kind != TokenKind::RightParenthesis) ExceptParse("error: Expected ')'", token); 
+            rparen();
             return Conditional(condition, ParseStatement()); 
         }
 
@@ -179,29 +163,23 @@ class RDParser : public Parser
             auto token = NextToken();
             if (token.kind != TokenKind::Keyword || token.value != "while") 
                 ExceptParse("error: Expected keyword 'while'", token);
-            token = NextToken();
-            if (token.kind != TokenKind::LeftParenthesis)
-                ExceptParse("error: Expected '('", token);
+            lparen();
             auto condition = ParseExpression();
-            token = NextToken();
-            if (token.kind != TokenKind::RightParenthesis)
-                ExceptParse("error: Expected ')'", token);
+            rparen();
             return CreateRef<DoWhileStatement>(body, condition); 
         }
 
         Statement::Ref ParseForStatement()
         {
-            auto token = NextToken(); 
-            if (token.kind != TokenKind::LeftParenthesis) ExceptParse("error: Expected '('", token);
-            token = PeekToken();
+            lparen();
+            auto token = PeekToken();
             if (token.kind == TokenKind::Keyword && token.value == "int")
             {
                 ConsumeToken();
                 auto declaration = ParseDeclaration(); 
                 auto condition = ParseNullExpression(); 
                 if (condition->type() == SyntaxType::Null) condition = CreateRef<IntConstant>(1);
-                auto token = NextToken();
-                if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'", token);
+                semicolon();
                 token = PeekToken();
                 Expression::Ref post_expression;
                 if (token.kind == TokenKind::RightParenthesis)
@@ -210,18 +188,15 @@ class RDParser : public Parser
                     post_expression = CreateRef<NullExpression>();
                 } else {
                     post_expression = ParseExpression(); 
-                    token = NextToken();
-                    if (token.kind != TokenKind::RightParenthesis) ExceptParse("error: Expected ')'", token); 
+                    rparen();
                 }
                 return CreateRef<ForDeclStatement>(declaration, condition, post_expression, ParseStatement()); 
             } else {
                 auto expression = ParseNullExpression(); 
-                auto token = NextToken();
-                if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'", token);
+                semicolon();
                 auto condition = ParseNullExpression(); 
                 if (condition->type() == SyntaxType::Null) condition = CreateRef<IntConstant>(1);
-                token = NextToken();
-                if (token.kind != TokenKind::Semicolon) ExceptParse("error: Expected ';'", token);
+                semicolon();
                 token = PeekToken();
                 Expression::Ref post_expression;
                 if (token.kind == TokenKind::RightParenthesis)
@@ -230,8 +205,7 @@ class RDParser : public Parser
                     post_expression = CreateRef<NullExpression>();
                 } else {
                     post_expression = ParseExpression(); 
-                    token = NextToken();
-                    if (token.kind != TokenKind::RightParenthesis) ExceptParse("error: Expected ')'", token); 
+                    rparen();
                 }
                 return CreateRef<ForStatement>(expression, condition, post_expression, ParseStatement()); 
             }
@@ -239,11 +213,9 @@ class RDParser : public Parser
 
         WhileStatement::Ref ParseWhileStatement()
         {
-            auto token = NextToken();
-            if (token.kind != TokenKind::LeftParenthesis) ExceptParse("error: Expected '('", token);
+            lparen();
             auto condition = ParseExpression(); 
-            token = NextToken();
-            if (token.kind != TokenKind::RightParenthesis) ExceptParse("error: Expected ')'", token); 
+            rparen();
             auto body = ParseStatement(); 
             return CreateRef<WhileStatement>(condition, body);
         }
@@ -307,9 +279,7 @@ class RDParser : public Parser
             {
                 ConsumeToken();
                 auto lvalue = ParseExpression();
-                auto token = PeekToken(); 
-                if (token.kind != TokenKind::Colon) ExceptParse("error: Expected ':' for ternary expression", token);
-                ConsumeToken();
+                colon();
                 auto rvalue = ParseTernaryExpression();
                 return CreateRef<TernaryOp>(expr, lvalue, rvalue);
             }
@@ -505,8 +475,7 @@ class RDParser : public Parser
             if (token.kind == TokenKind::LeftParenthesis)
             {
                 auto expr = ParseExpression(); 
-                token = NextToken();
-                if (token.kind != TokenKind::RightParenthesis) ExceptParse("error: expected ')'", token); 
+                rparen();
                 return expr; 
             } else if (token.kind == TokenKind::IntConstant || token.kind == TokenKind::HexConstant)
                 return CreateRef<IntConstant>(parse_c_int(token.value)); 
