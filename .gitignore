@@ -5,3 +5,4 @@ examples/exclude/**
 !examples/exclude/*.c
 examples/stage_**/*.*
 !examples/stage_**/*.c
+.clangd
